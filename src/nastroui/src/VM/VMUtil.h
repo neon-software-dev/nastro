@@ -15,7 +15,7 @@ namespace Nastro
         if ((target == newValue) && !forceEmit) { return false; }
 
         target = newValue;
-        QMetaObject::invokeMethod(sender, signal, target);
+        std::invoke(signal, sender, target);
 
         return true;
     }

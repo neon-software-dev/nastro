@@ -35,6 +35,8 @@
 /*                                                                                   */
 /*************************************************************************************/
 
+#pragma GCC system_header
+
 #ifndef NASTROUI_SRC_UTIL_COLORMAP_H
 #define NASTROUI_SRC_UTIL_COLORMAP_H
 

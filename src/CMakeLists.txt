@@ -12,7 +12,7 @@ option(NASTRO_OPT_DEV_BUILD "Configure NASTRO for developer mode" OFF)
 # Global variables
 ####
 
-if (NASTRO_OPT_DEV_BUILD)
+if (NASTRO_OPT_DEV_BUILD STREQUAL "ON")
     message("NASTRO: Configuring for developer mode")
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")

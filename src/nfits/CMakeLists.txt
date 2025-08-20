@@ -118,13 +118,15 @@ endif()
 #
 ####
 
-# Temporary install for if nfits is built as shared within nastro
-install(
-	TARGETS
-		NFITS
-	LIBRARY DESTINATION ${CMAKE_INSTALL_BINDIR}
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+# Temporary install if nfits is built as shared within nastro
+if (BUILD_SHARED_LIBS)
+	install(
+		TARGETS
+			NFITS
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_BINDIR}
+	)
+endif()
 
 # Below is full install for when nfits is released by itself
 #[[

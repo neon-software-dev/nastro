@@ -5,7 +5,6 @@
       "name": "desktop",
       "hidden": true,
       "cacheVariables": {
-        "NASTRO_OPT_DEV_BUILD": "OFF",
         "BUILD_SHARED_LIBS": "OFF",
         "BUILD_TESTING": "ON"
       }
@@ -31,7 +30,8 @@
       "name": "distro",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "NASTRO_OPT_DEV_BUILD": "OFF"
       }
     },
     {
