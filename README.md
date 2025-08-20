@@ -24,7 +24,8 @@ NAstro is a cross-platform, C++23, FITS 4.0 Viewer.
 ## Upcoming Features
 
 - More/better image manipulation controls
+- Exporting of rendered images
 - Experimenting with stacking/combining images
-- Support viewing other FITS data types (ascii/binary tables)
 - WCS parsing
 - Per-pixel Color/Physical Value/WCS display
+- Support viewing other FITS data types (ascii/binary tables)
