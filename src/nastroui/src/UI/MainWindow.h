@@ -1,0 +1,75 @@
+/*
+ * SPDX-FileCopyrightText: 2025 Joe @ NEON Software
+ *
+ * SPDX-License-Identifier: MIT
+ */
+ 
+#ifndef SRC_UI_MAINWINDOW_H
+#define SRC_UI_MAINWINDOW_H
+
+#include <QMainWindow>
+
+#include <filesystem>
+
+class QDockWidget;
+class QVBoxLayout;
+class QMdiArea;
+class QMdiSubWindow;
+
+namespace Nastro
+{
+    class MainWindowVM;
+    class FilesWidget;
+    class HeadersWidget;
+    class Worker;
+    class NastroDockWidget;
+
+    class MainWindow : public QMainWindow
+    {
+        Q_OBJECT
+
+        public:
+
+            MainWindow();
+
+        private slots:
+
+            void Slot_File_ImportFiles_ActionTriggered();
+            void Slot_File_ImportDirectory_ActionTriggered();
+            void Slot_File_Exit_ActionTriggered();
+
+            void Slot_FilesWidget_OnHDUActivated(const std::filesystem::path& filePath, const std::size_t& hduIndex);
+
+            void Slot_LoadHDUData_Complete(Nastro::Worker* pWorker);
+
+            void Slot_UI_MdiArea_SubWindowActivated(QMdiSubWindow* pMdiSubWindow);
+
+        private:
+
+            void InitUI();
+            void InitMenuBar();
+            void InitWidgets();
+
+            void BindVM();
+
+            void OnViewFiles();
+            void OnViewHeaders();
+
+        private:
+
+            std::unique_ptr<MainWindowVM> m_pVM;
+
+            QAction* m_pViewFilesAction{nullptr};
+            QAction* m_pViewHeadersAction{nullptr};
+
+            QMdiArea* m_pMdiArea{nullptr};
+
+            std::optional<FilesWidget*> m_pFilesWidget{nullptr};
+            std::optional<NastroDockWidget*> m_pFilesDockWidget;
+
+            std::optional<HeadersWidget*> m_pHeadersWidget;
+            std::optional<NastroDockWidget*> m_pHeadersDockWidget;
+    };
+}
+
+#endif //SRC_UI_MAINWINDOW_H

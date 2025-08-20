@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/nastro_icon_opaque_1024.png</file>
+        <file>images/nastro_icon_transparent_1024.png</file>
+    </qresource>
+</RCC>
