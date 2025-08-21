@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) 
 ![Language](https://img.shields.io/badge/language-C++23-green.svg?style=flat-square) 
 
-nastro is a cross-platform, C++23, FITS 4.0 Viewer.
+nastro is a cross-platform FITS 4.0 Viewer.
 
 Import FITS files and render N-dimensional image data in an MDI work area.
 
