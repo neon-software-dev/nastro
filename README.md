@@ -60,9 +60,3 @@ mkdir -p ../build && cd ../build
 cmake ../src --preset desktop-distro-linux -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=../external/vcpkg/scripts/buildsystems/vcpkg.cmake
 make
 ```
-
-### Building on Windows
-
-If on Windows, you'll likely also need to run Qt's `windeployqt` tool after building. Pass in the location of nastroui.exe as an argument to the tool.
-
-If using `prepare_dependencies.py`, `windeployqt` is located in `{nastro}/external/vcpkg/installed/{platform}/tools/Qt6/bin`
