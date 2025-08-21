@@ -26,19 +26,20 @@ Image rendering supports common transfer functions and perceptually uniform colo
 - Ability to stack/combine images
 - Support for viewing other data types (ascii/binary tables)
 
-## Running
-
-Release archives will be provided when the project is closer to completion. 
-
-Until then, build from source using the instructions below.
-
 ## Building From Source
 
-The project's dependencies are:
+### Required build tools:
+- C++ compiler >= C++23
+- CMake >= 3.26.4
+- Python 3+ (If using the `prepare_dependencies.py` script)
+
+### Required compile dependencies:
 - Qt6 - Core, Gui, Widgets
 - Google Test (If building tests)
 
 Either supply these dependencies yourself or use the `prepare_dependencies.py` script in `external` which will use vcpkg to supply these dependencies for you.
+
+### CMake configuration
 
 The project is defined by a typical CMake project. CMake presets are available following the pattern: 
 
@@ -50,7 +51,7 @@ Supported CMake options:
 - NASTRO_OPT_DEV_BUILD - Whether to enable all compiler warnings and treat them as errors (default: ON for debug/release presets, OFF otherwise)
 - CMAKE_TOOLCHAIN_FILE - Supply this if using the `prepare_dependencies.py` script 
 
-Example (linux) build commands:
+### Example (linux) build commands:
 
 ```
 git clone https://github.com/neon-software-dev/nastro.git
@@ -60,4 +61,8 @@ cmake ../src --preset desktop-distro-linux -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN
 make
 ```
 
-If on Windows, you'll likely also need to run Qt's `windeployqt` tool, passing in the location of nastroui.exe as an argument (this tool is in either your system Qt SDK or the vcpkg-built Qt SDK if using the `prepare_dependencies.py` script).
+### Building on Windows
+
+If on Windows, you'll likely also need to run Qt's `windeployqt` tool after building. Pass in the location of nastroui.exe as an argument to the tool.
+
+If using `prepare_dependencies.py`, `windeployqt` is located in `{nastro}/external/vcpkg/installed/{platform}/tools/Qt6/bin`
