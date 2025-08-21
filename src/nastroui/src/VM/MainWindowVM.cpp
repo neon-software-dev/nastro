@@ -67,7 +67,7 @@ void MainWindowVM::OnImportDirectory(const std::filesystem::path& directoryPath)
             return;
         }
 
-        if (VALID_FITS_EXTENSIONS.contains(dirEntry.path().extension()))
+        if (VALID_FITS_EXTENSIONS.contains(dirEntry.path().extension().string()))
         {
             filePaths.push_back(dirEntry.path());
         }

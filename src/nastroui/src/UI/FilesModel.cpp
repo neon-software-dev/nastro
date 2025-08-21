@@ -94,7 +94,7 @@ QVariant FITSFilesTreeItem::GetDisplayData(int column) const
 {
     if (column == COL_FILENAME)
     {
-        return QString::fromStdString(m_filePath.filename());
+        return QString::fromStdString(m_filePath.filename().string());
     }
     else if (column == COL_MODIFIED)
     {

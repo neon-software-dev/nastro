@@ -196,7 +196,7 @@ std::expected<std::string, Error> ParseKeywordValue_AsDisplayString(KeywordValue
         nonCommentSpan = nonCommentSpan.subspan(0, nonCommentSpan.size() - 1);
     }
 
-    return std::string(nonCommentSpan.cbegin(), nonCommentSpan.cend());
+    return std::string(nonCommentSpan.begin(), nonCommentSpan.end());
 }
 
 /**

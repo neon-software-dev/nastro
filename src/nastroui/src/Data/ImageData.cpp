@@ -27,7 +27,7 @@ std::optional<double> GetOptionalDoubleKeywordValue(const NFITS::HDU* pHDU, cons
     return std::nullopt;
 }
 
-std::expected<std::unique_ptr<ImageData>, bool> ImageData::FromData(const NFITS::HDU* pHDU, std::vector<std::byte>&& data)
+std::expected<std::unique_ptr<ImageData>, bool> ImageData::FromData(const NFITS::HDU *pHDU, std::vector<std::byte> &&data)
 {
     const auto bitpix = pHDU->header.GetFirstKeywordRecordAsInteger(NFITS::KEYWORD_NAME_BITPIX);
     if (!bitpix) { return std::unexpected(false); }
@@ -44,14 +44,16 @@ std::expected<std::unique_ptr<ImageData>, bool> ImageData::FromData(const NFITS:
         naxisns.push_back(*naxisn);
     }
 
-    ImageParams params{
-        .bitpix = *bitpix,
-        .naxisns = naxisns,
-        .bZero = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_BZERO),
-        .bScale = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_BSCALE),
-        .dataMin = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_DATAMIN),
-        .dataMax = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_DATAMAX)
-    };
+    const auto bZero = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_BZERO);
+    const auto bScale = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_BSCALE);
+
+    ImageParams params{};
+    params.bitpix = *bitpix;
+    params.naxisns = naxisns;
+    if (bZero) { params.bZero = *bZero; }
+    if (bScale) { params.bScale = *bScale; }
+    params.dataMin = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_DATAMIN);
+    params.dataMax = GetOptionalDoubleKeywordValue(pHDU, NFITS::KEYWORD_NAME_DATAMAX);
 
     return std::make_unique<ImageData>(params, std::move(data));
 }

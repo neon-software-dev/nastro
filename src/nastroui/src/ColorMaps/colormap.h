@@ -35,7 +35,9 @@
 /*                                                                                   */
 /*************************************************************************************/
 
-#pragma GCC system_header
+#if __GNUC__ >= 4
+  #pragma GCC system_header
+#endif
 
 #ifndef NASTROUI_SRC_UTIL_COLORMAP_H
 #define NASTROUI_SRC_UTIL_COLORMAP_H
@@ -47,6 +49,8 @@
 #include <functional>//function
 #include <vector>
 #include <cstdint>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 #include "colorspace.h"//luv2rgb
 

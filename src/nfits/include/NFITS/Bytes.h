@@ -8,6 +8,7 @@
 #define NFITS_INCLUDE_NFITS_BYTES_H
 
 #include <cstdint>
+#include <compare>
 
 namespace NFITS
 {

@@ -9,17 +9,15 @@
 
 #include "Data.h"
 
+#include <NFITS/HDU.h>
+
 #include <vector>
 #include <expected>
 #include <memory>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <optional>
-
-namespace NFITS
-{
-    class HDU;
-}
 
 namespace Nastro
 {
@@ -27,8 +25,8 @@ namespace Nastro
     {
         int64_t bitpix;
         std::vector<int64_t> naxisns;
-        std::optional<double> bZero;
-        std::optional<double> bScale;
+        double bZero = 0.0;
+        double bScale = 1.0;
         std::optional<double> dataMin;
         std::optional<double> dataMax;
     };

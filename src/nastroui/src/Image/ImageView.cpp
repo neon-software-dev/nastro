@@ -30,8 +30,8 @@ inline constexpr void SwapEndiannessPacked(T& value) noexcept
 template <typename DataType>
 double GetPhysicalValue(std::span<const DataType> data,
                         uintmax_t dataIndex,
-                        const std::optional<double> bzero,
-                        const std::optional<double> bscale)
+                        double bzero,
+                        double bscale)
 {
     DataType dataValue = data[dataIndex];
 
@@ -41,19 +41,7 @@ double GetPhysicalValue(std::span<const DataType> data,
         SwapEndiannessPacked(dataValue);
     }
 
-    // Use bzero/bscale to calculate physical value, if available, or just return the data value if not
-    if (bzero || bscale)
-    {
-        /**
-         * [4.4.2.5]
-         * physical value = BZERO + BSCALE × array value.
-         */
-        return *bzero + (*bscale * static_cast<double>(dataValue));
-    }
-    else
-    {
-        return (double)dataValue;
-    }
+    return bzero + (bscale * static_cast<double>(dataValue));
 }
 
 std::pair<double, double> CalculatePhysicalMinMax(const std::vector<double>& physicalValues)
@@ -106,18 +94,6 @@ std::expected<std::vector<double>, bool> ImageDataToPhysicalValues(const ImageVi
     const auto imageWidth       = imageParams.naxisns.at(0);
     const auto imageHeight      = imageParams.naxisns.at(1);
     const auto sliceDataOffset  = CalculateSelectionDataOffset(selection, imageParams);
-    const bool hasScaling       = imageParams.bZero || imageParams.bScale;
-
-    if (hasScaling && !imageParams.bZero)
-    {
-        std::cerr << "DataToImageTyped: If bzero or bscaling are present, both must be" << std::endl;
-        return std::unexpected(false);
-    }
-    if (hasScaling && !imageParams.bScale)
-    {
-        std::cerr << "DataToImageTyped: If bzero or bscaling are present, both must be" << std::endl;
-        return std::unexpected(false);
-    }
 
     // Interpret the image data as an array of the specific data type values
     const auto typedImageData = std::span<const DataType>(
@@ -149,18 +125,13 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
     const auto imageWidth = imageParams.naxisns.at(0);
     const auto imageHeight = imageParams.naxisns.at(1);
 
-    auto physicalValueMin = imageParams.dataMin;
-    auto physicalValueMax = imageParams.dataMax;
+    // Note that even though the image's datamin/datamax may be provided in params, we're calculating them ourselves
+    // instead. It's slower, but there's FITS files with invalid datamin/datamax values provided.
+    const auto physicalMinMax = CalculatePhysicalMinMax(physicalValues);
+    const auto physicalValueMin = physicalMinMax.first;
+    const auto physicalValueMax = physicalMinMax.second;
 
-    // If datamin/datamax weren't provided, calculate them ourselves from the data
-    if (!physicalValueMin || !physicalValueMax)
-    {
-        const auto physicalMinMax = CalculatePhysicalMinMax(physicalValues);
-        physicalValueMin = physicalMinMax.first;
-        physicalValueMax = physicalMinMax.second;
-    }
-
-    const double physicalValueRange = *physicalValueMax - *physicalValueMin;
+    const double physicalValueRange = physicalValueMax - physicalValueMin;
 
     // Create a QImage and fill it with interpreted image data
     auto qImage = QImage(static_cast<int>(imageWidth), static_cast<int>(imageHeight), QImage::Format::Format_RGB888);
@@ -178,7 +149,7 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
 
             const double physicalValue = physicalValues.at(physicalValueIndex);
 
-            double norm = (physicalValue - *physicalValueMin) / physicalValueRange;
+            double norm = (physicalValue - physicalValueMin) / physicalValueRange;
 
             // Force clamp norm to be within [0.0..1.0]. There's edge cases where a file provides DATAMIN/DATAMAX that
             // are specified in a lower level of precision, and when we do the math to calculate physical value, for the
@@ -317,7 +288,7 @@ std::expected<QImage, bool> ImageDataToQImage(const ImageView::Selection& select
         {
             if (params.invertColors)
             {
-                for (unsigned int v = 0; v < 3; ++v)
+                for (int v = 0; v < 3; ++v)
                 {
                     pScanline[(x * 3) + v] = 255 - pScanline[(x * 3) + v];
                 }

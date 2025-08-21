@@ -9,6 +9,7 @@
 
 #include <string>
 #include <format>
+#include <optional>
 
 namespace NFITS
 {

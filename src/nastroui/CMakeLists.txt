@@ -52,13 +52,22 @@ set_target_properties(nastroui
 )
 
 # On Windows, copy runtime dlls to same directory as the binary
-if (CMAKE_IMPORT_LIBRARY_SUFFIX)
+#if (CMAKE_IMPORT_LIBRARY_SUFFIX)
+#	add_custom_command(
+#		TARGET nastroui POST_BUILD
+#		COMMAND ${CMAKE_COMMAND} -E copy
+#			-t $<TARGET_FILE_DIR:nastroui>
+#			$<TARGET_RUNTIME_DLLS:nastroui>
+#		COMMAND_EXPAND_LISTS
+#	)
+#endif()
+
+# On Windows, run windeployqt on the output file so to make Qt ready to run
+if(WIN32)
 	add_custom_command(
 		TARGET nastroui POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy
-			-t $<TARGET_FILE_DIR:nastroui>
-			$<TARGET_RUNTIME_DLLS:nastroui>
-		COMMAND_EXPAND_LISTS
+		COMMAND Qt6::windeployqt
+		ARGS $<TARGET_FILE:nastroui>
 	)
 endif()
 

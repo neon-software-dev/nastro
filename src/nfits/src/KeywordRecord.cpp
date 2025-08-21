@@ -17,7 +17,7 @@ namespace NFITS
 KeywordRecord KeywordRecord::FromRaw(KeywordRecordCSpan keywordRecordSpan)
 {
     KeywordRecordBytes keywordRecord{0};
-    std::copy_n(keywordRecordSpan.cbegin(), KEYWORD_RECORD_BYTE_SIZE.value, keywordRecord.begin());
+    std::copy_n(keywordRecordSpan.begin(), KEYWORD_RECORD_BYTE_SIZE.value, keywordRecord.begin());
 
     return KeywordRecord(keywordRecord);
 }
@@ -31,7 +31,7 @@ KeywordRecord::KeywordRecord(const KeywordRecordBytes& keywordRecord)
 std::string KeywordRecord::GetKeywordRecordRaw() const
 {
     const auto charSpan = std::span<const char>(m_keywordRecord);
-    return {charSpan.cbegin(), charSpan.cend()};
+    return {charSpan.begin(), charSpan.end()};
 }
 
 std::expected<std::optional<std::string>, Error> KeywordRecord::GetKeywordName() const
