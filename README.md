@@ -23,7 +23,7 @@ Image rendering supports common transfer functions and perceptually uniform colo
 - Exporting of rendered images
 - WCS parsing
 - Per-pixel Color/Physical Value/WCS display
-- A bility to stack/combine images
+- Ability to stack/combine images
 - Support for viewing other data types (ascii/binary tables)
 
 ## Running
