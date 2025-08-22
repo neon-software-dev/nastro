@@ -57,13 +57,25 @@ namespace NFITS
              * @return The keyword's value as an integer, or std::unexpected if an error occurred (e.g. the keyword
              * doesn't have a value, or the value isn't an integer)
              */
-            [[nodiscard]] std::expected<int64_t, Error> GetKeywordValueAsInteger() const;
+            [[nodiscard]] std::expected<int64_t, Error> GetKeywordValue_AsInteger() const;
 
             /**
-            * @return The keyword's value as a real, or std::unexpected if an error occurred (e.g. the keyword
-            * doesn't have a value, or the value isn't a real)
-            */
-            [[nodiscard]] std::expected<double, Error> GetKeywordValueAsReal() const;
+             * @return The keyword's value as a real, or std::unexpected if an error occurred (e.g. the keyword
+             * doesn't have a value, or the value isn't a real)
+             */
+            [[nodiscard]] std::expected<double, Error> GetKeywordValue_AsReal() const;
+
+            /**
+             * @return The keyword's value as a logical, or std::unexpected if an error occurred (e.g. the keyword
+             * doesn't have a value, or the value isn't a logical)
+             */
+            [[nodiscard]] std::expected<bool, Error> GetKeywordValue_AsLogical() const;
+
+            /**
+             * @return The keyword's value as a string, or std::unexpected if an error occurred (e.g. the keyword
+             * doesn't have a value, or the value isn't a string)
+             */
+            [[nodiscard]] std::expected<std::string, Error> GetKeywordValue_AsString() const;
 
             /**
              * @return A validation error associated with the keyword record, or std::nullopt if there's no issue

@@ -24,8 +24,10 @@ namespace NFITS
     {
         enum class Type
         {
+            Empty,
             Image,
-            Empty
+            Table,
+            BinTable
         };
 
         /**

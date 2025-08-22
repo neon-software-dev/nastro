@@ -75,7 +75,7 @@ void LoadHDUDataWorker::DoWork()
     auto pHDUData = LoadHDUDataBlocking(pFITSFile->get(), *pHDU);
     if (!pHDUData)
     {
-        std::cout << "LoadHDUDataWorker::DoWork: Failed to load HDU data" << std::endl;
+        std::cerr << "LoadHDUDataWorker::DoWork: Failed to load HDU data" << std::endl;
         emit Signal_WorkCompleteError();
         return;
     }

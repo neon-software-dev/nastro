@@ -6,7 +6,7 @@
  
 #include "Validation.h"
 
-#include <NFITS/KeywordName.h>
+#include <NFITS/KeywordCommon.h>
 
 #include <algorithm>
 
@@ -73,7 +73,7 @@ Result ValidatePrimaryHeader(const Header& header)
         return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Third keyword must be the NAXIS keyword");
     }
 
-    const auto naxisValue = firstHeaderBlock.keywordRecords.at(2).GetKeywordValueAsInteger();
+    const auto naxisValue = firstHeaderBlock.keywordRecords.at(2).GetKeywordValue_AsInteger();
     if (!naxisValue)
     {
         return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: NAXIS keyword failed parsing");
@@ -100,7 +100,7 @@ Result ValidatePrimaryHeader(const Header& header)
             return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Failed to find properly positioned {} keyword", naxisnKeywordName);
         }
 
-        const auto naxisnValue = firstHeaderBlock.keywordRecords.at(naxisnKeywordIndex).GetKeywordValueAsInteger();
+        const auto naxisnValue = firstHeaderBlock.keywordRecords.at(naxisnKeywordIndex).GetKeywordValue_AsInteger();
         if (!naxisnValue)
         {
             return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: {} keyword failed parsing", naxisnKeywordName);

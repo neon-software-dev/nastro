@@ -41,25 +41,24 @@ namespace NFITS
     [[nodiscard]] NFITS_PUBLIC bool ParseValueIndicator(KeywordValueIndicatorCSpan valueIndicatorSpan);
 
     /**
-     * Parses the value in a keyword value span as a raw/display string, without any comment included. Effectively works
-     * by removing any comment, removing trailing and leading whitespace from the remainder, and returning that as a
-     * string.
-     *
-     * Warning: Do not use this as a way to parse a value as a string; this method doesn't care about the underlying
-     * value datatype, it just returns the value characters as a string, mostly for user display purposes, not for
-     * logical purposes.
+     * Parses a keyword value as an integer value
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<std::string, Error> ParseKeywordValue_AsDisplayString(KeywordValueCSpan keywordValueSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
 
     /**
-     * Parses a keyword value span as an integer value
+     * Parses a keyword value as a real
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keywordValueSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
 
     /**
-     * Parses a keyword value span as a real
+     * Parses a keyword value as a logical
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<double, Error> ParseKeywordValue_AsReal(KeywordValueCSpan keywordValueSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+
+    /**
+    * Parses a keyword value as a string
+    */
+    [[nodiscard]] NFITS_PUBLIC std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
 }
 
 #endif //NFITS_SRC_PARSING_H

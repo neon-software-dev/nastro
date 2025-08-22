@@ -27,7 +27,7 @@ namespace Nastro
     enum class ColorMap
     {
         // Custom color maps
-        Gray, Fire, Ocean, Ice,
+        Fire, Ocean, Ice,
 
         // Linear
         CET_L01, CET_L02, CET_L03, CET_L04, CET_L05, CET_L06, CET_L07, CET_L08, CET_L09, CET_L10,
@@ -72,7 +72,7 @@ namespace Nastro
                 double logTransferBase = 100.0;
 
                 // Color map to apply to determine pixel colors
-                ColorMap colorMap{ColorMap::Gray};
+                ColorMap colorMap{ColorMap::CET_L01};
 
                 // Whether to invert the final image pixel colors
                 bool invertColors{false};

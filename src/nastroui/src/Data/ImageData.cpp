@@ -7,7 +7,7 @@
 #include "ImageData.h"
 
 #include <NFITS/HDU.h>
-#include <NFITS/KeywordName.h>
+#include <NFITS/KeywordCommon.h>
 
 namespace Nastro
 {
@@ -17,7 +17,7 @@ std::optional<double> GetOptionalDoubleKeywordValue(const NFITS::HDU* pHDU, cons
     const auto keyword = pHDU->header.GetFirstKeywordRecord(keywordName);
     if (keyword)
     {
-        const auto val = (*keyword)->GetKeywordValueAsReal();
+        const auto val = (*keyword)->GetKeywordValue_AsReal();
         if (val)
         {
             return *val;
@@ -29,16 +29,16 @@ std::optional<double> GetOptionalDoubleKeywordValue(const NFITS::HDU* pHDU, cons
 
 std::expected<std::unique_ptr<ImageData>, bool> ImageData::FromData(const NFITS::HDU *pHDU, std::vector<std::byte> &&data)
 {
-    const auto bitpix = pHDU->header.GetFirstKeywordRecordAsInteger(NFITS::KEYWORD_NAME_BITPIX);
+    const auto bitpix = pHDU->header.GetFirstKeywordRecord_AsInteger(NFITS::KEYWORD_NAME_BITPIX);
     if (!bitpix) { return std::unexpected(false); }
 
-    const auto naxis = pHDU->header.GetFirstKeywordRecordAsInteger(NFITS::KEYWORD_NAME_NAXIS);
+    const auto naxis = pHDU->header.GetFirstKeywordRecord_AsInteger(NFITS::KEYWORD_NAME_NAXIS);
     if (!naxis) { return std::unexpected(false); }
 
     std::vector<int64_t> naxisns;
     for (int64_t n = 1; n <= *naxis; ++n)
     {
-        const auto naxisn = pHDU->header.GetFirstKeywordRecordAsInteger(std::format("NAXIS{}", n));
+        const auto naxisn = pHDU->header.GetFirstKeywordRecord_AsInteger(std::format("NAXIS{}", n));
         if (!naxisn) { return std::unexpected(false); }
 
         naxisns.push_back(*naxisn);

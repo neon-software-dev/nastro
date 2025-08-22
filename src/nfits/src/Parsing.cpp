@@ -99,11 +99,11 @@ bool ParseValueIndicator(KeywordValueIndicatorCSpan valueIndicatorSpan)
 }
 
 /**
- * Scans forwards through a keyword value span looking for the start of a comment, which is
+ * Scans forwards through a keyword record looking for the start of a comment, which is
  * defined by a forward slash that's not within a string. If a comment doesn't exist,
  * returns std::nullopt
  */
-std::optional<std::size_t> FindCommentStartIndex(KeywordValueCSpan keywordValueSpan)
+std::optional<std::size_t> FindCommentStartIndex(KeywordRecordCSpan keywordRecordSpan)
 {
     /**
      * If a comment follows the value field, it must be preceded
@@ -119,17 +119,18 @@ std::optional<std::size_t> FindCommentStartIndex(KeywordValueCSpan keywordValueS
 
     bool inString = false;
 
-    for (std::size_t pos = 0; pos < keywordValueSpan.size(); ++pos)
+    // Note: Starting at 10, to skip over keyword and value indicator
+    for (std::size_t pos = 10; pos < keywordRecordSpan.size(); ++pos)
     {
-        const auto& c = keywordValueSpan[pos];
+        const auto& c = keywordRecordSpan[pos];
 
         if (c == '\'')
         {
             bool isDoubleQuote = false;
 
-            if (pos < (keywordValueSpan.size() - 1))
+            if (pos < (keywordRecordSpan.size() - 1))
             {
-                isDoubleQuote = keywordValueSpan[pos + 1] == '\'';
+                isDoubleQuote = keywordRecordSpan[pos + 1] == '\'';
             }
 
             if (!isDoubleQuote)
@@ -138,65 +139,15 @@ std::optional<std::size_t> FindCommentStartIndex(KeywordValueCSpan keywordValueS
             }
         }
 
+        // A forward slash not in a string denotes the start of a comment
         if (c == '/' && !inString)
         {
             return pos;
         }
     }
     
-    // If we looked through the whole span and saw no comment, then there is none
+    // No comment was found
     return std::nullopt;
-}
-
-std::expected<std::string, Error> ParseKeywordValue_AsDisplayString(KeywordValueCSpan keywordValueSpan, bool isFixedFormat)
-{
-    // Span which covers keywordValueSpan to the point where an (optional) comment starts
-    std::span<const char> nonCommentSpan;
-
-    /**
-     * [4.2.3]
-     * "If the value is a fixed-format integer, the ASCII representation
-     * shall be right-justified in Bytes 11 through 30.
-     */
-    if (isFixedFormat)
-    {
-        nonCommentSpan = keywordValueSpan.subspan<0, 20>();
-    }
-    else
-    {
-        /**
-         * [4.2.3]
-         * "A free-format integer value follows the same rules as fixed-
-         * format integers except that the ASCII representation may occur
-         * anywhere within Bytes 11 through 80."
-         */
-        const auto commentStartIndex = FindCommentStartIndex(keywordValueSpan);
-
-        // If there's no comment, use the whole span
-        if (!commentStartIndex)
-        {
-            nonCommentSpan = keywordValueSpan;
-        }
-        // Otherwise, use the non-comment portion of the span
-        else
-        {
-            nonCommentSpan = keywordValueSpan.subspan(0, *commentStartIndex);
-        }
-    }
-
-    // Trim leading spaces from the span
-    while (!nonCommentSpan.empty() && IsSpaceChar(nonCommentSpan.front()))
-    {
-        nonCommentSpan = nonCommentSpan.subspan(1);
-    }
-
-    // Trim trailing spaces from the span
-    while (!nonCommentSpan.empty() && IsSpaceChar(nonCommentSpan.back()))
-    {
-        nonCommentSpan = nonCommentSpan.subspan(0, nonCommentSpan.size() - 1);
-    }
-
-    return std::string(nonCommentSpan.begin(), nonCommentSpan.end());
 }
 
 /**
@@ -204,13 +155,13 @@ std::expected<std::string, Error> ParseKeywordValue_AsDisplayString(KeywordValue
  *
  * The span is required to match the format: [space...] integer value [space...]
  *
+ * Note that any comment should not be included in valueSpan.
+ *
  * [Appendix A]
  * integer value := [sign] digit [digit...]
  *   {Comment: Such an integer value is interpreted as a signed decimal number. It may contain leading zeros.}
  * sign := ‘-’ | ‘+’
  * digit := ‘0’–‘9’
- *
- * Any comment or non-value field must not be part of the span.
  */
 std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSpan)
 {
@@ -285,7 +236,7 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
     }
 }
 
-std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keywordValueSpan, bool isFixedFormat)
+std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
 {
     /**
      * [4.2.3]
@@ -294,7 +245,7 @@ std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keyw
      */
     if (isFixedFormat)
     {
-        const auto valueSpan = keywordValueSpan.subspan<0, 20>();
+        const auto valueSpan = keywordRecordSpan.subspan<10, 20>();
 
         // Require right-justified
         if (valueSpan[valueSpan.size() - 1] == ' ')
@@ -311,17 +262,17 @@ std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keyw
      * format integers except that the ASCII representation may occur
      * anywhere within Bytes 11 through 80."
      */
-    const auto commentStartIndex = FindCommentStartIndex(keywordValueSpan);
+    const auto commentStartIndex = FindCommentStartIndex(keywordRecordSpan);
 
     // If there's no comment, pass through the whole span to be parsed
     if (!commentStartIndex)
     {
-        return ParseValue_AsInteger(keywordValueSpan);
+        return ParseValue_AsInteger(keywordRecordSpan.subspan(10));
     }
     // Otherwise, pass through the non-comment portion of the span to be parsed
     else
     {
-        return ParseValue_AsInteger(keywordValueSpan.subspan(0, *commentStartIndex));
+        return ParseValue_AsInteger(keywordRecordSpan.subspan(10, *commentStartIndex - 10));
     }
 }
 
@@ -329,6 +280,8 @@ std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keyw
  * Parses a real value out of a value span. Handles both fixed and free-floating real values.
  *
  * The span is required to match the format: [space...] floating value [space...]
+ *
+ * Note that any comment should not be included in valueSpan.
  *
  * [Appendix a]
  * floating value := decimal number [exponent]
@@ -338,8 +291,6 @@ std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordValueCSpan keyw
  * fraction part := digit | [digit...]
  * exponent := exponent letter [sign] digit [digit...]
  * exponent letter := ‘E’ | ‘D’
- *
- * Any comment or non-value field must not be part of the span.
  */
 std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
 {
@@ -453,7 +404,7 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
     }
 }
 
-std::expected<double, Error> ParseKeywordValue_AsReal(KeywordValueCSpan keywordValueSpan, bool isFixedFormat)
+std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
 {
     /**
      * [4.2.4]
@@ -463,10 +414,10 @@ std::expected<double, Error> ParseKeywordValue_AsReal(KeywordValueCSpan keywordV
      */
     if (isFixedFormat)
     {
-        const auto valueSpan = keywordValueSpan.subspan<0, 20>();
+        const auto valueSpan = keywordRecordSpan.subspan<10, 20>();
 
-        // Require right-justified
-        if (valueSpan[valueSpan.size() - 1] == ' ')
+        // Require right-justified; no space at the end
+        if (IsSpaceChar(valueSpan.last(1)[0]))
         {
             return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsReal: Fixed format is not right-justified"));
         }
@@ -475,23 +426,213 @@ std::expected<double, Error> ParseKeywordValue_AsReal(KeywordValueCSpan keywordV
     }
 
     /**
-     * [4.2..4]
+     * [4.2.4.]
      * A free-format floating-point value follows the same rules as
      * a fixed-format floating-point value except that the ASCII repre-
      * sentation may occur anywhere within Bytes 11 through 80.
      */
-    const auto commentStartIndex = FindCommentStartIndex(keywordValueSpan);
+    const auto commentStartIndex = FindCommentStartIndex(keywordRecordSpan);
 
-    // If there's no comment, pass through the whole span to be parsed
+    // If there's no comment, pass through the whole value span to be parsed
     if (!commentStartIndex)
     {
-        return ParseValue_AsReal(keywordValueSpan);
+        return ParseValue_AsReal(keywordRecordSpan.subspan(10));
     }
-    // Otherwise, pass through the non-comment portion of the span to be parsed
+    // Otherwise, pass through the non-comment portion of the value span to be parsed
     else
     {
-        return ParseValue_AsReal(keywordValueSpan.subspan(0, *commentStartIndex));
+        return ParseValue_AsReal(keywordRecordSpan.subspan(10, *commentStartIndex - 10));
     }
+}
+
+std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+{
+    std::optional<char> logicalChar;
+
+    /**
+     * [4.2.2.]
+     * If the value is a fixed-format logical constant, it shall appear as
+     * an upper-case T or F in Byte 30.
+     */
+    if (isFixedFormat)
+    {
+        logicalChar = keywordRecordSpan[29];
+    }
+    /**
+    * [4.2.2.]
+    * A logical value is represented
+    * in free-format by a single character consisting of an upper-case
+    * T or F as the first non-space character in Bytes 11 through 80.
+    */
+    else
+    {
+        const auto valueSpan = keywordRecordSpan.subspan(10, 70);
+
+        const auto it = std::ranges::find_if(valueSpan, [](const char& c) { return !IsSpaceChar(c); });
+        if (it != valueSpan.cend())
+        {
+            logicalChar = *it;
+        }
+    }
+
+    if (!logicalChar)
+    {
+        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsLogical: No logical value character detected"));
+    }
+    else if (*logicalChar == 'T')
+    {
+        return true;
+    }
+    else if (*logicalChar == 'F')
+    {
+        return false;
+    }
+    else
+    {
+        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsLogical: Invalid logical character: {}", *logicalChar));
+    }
+}
+
+std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+{
+    const auto commentStartIndex = FindCommentStartIndex(keywordRecordSpan);
+
+    // When we're searching the string we stop where the comment starts, if it exists, or else the end of the record, if not
+    const auto stringSearchEndPos = commentStartIndex ? *commentStartIndex : keywordRecordSpan.size();
+
+    //
+    // Find the string starting quote
+    //
+    std::size_t startQuotePos = 0;
+
+    if (isFixedFormat)
+    {
+        /**
+         * [4.2.1]
+         * If the value is a fixed-format character string, the starting
+         * single-quote character must be in Byte 11 of the keyword record
+         */
+        if (keywordRecordSpan[10] != '\'')
+        {
+            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Fixed format string doesn't have starting quote in pos 10"));
+        }
+
+        startQuotePos = 10;
+    }
+    else
+    {
+        /**
+         * [4.2.1]
+         * Free-format character strings follow the same rules as fixed-
+         * format character strings except that the starting single-quote
+         * character may occur after Byte 11. Any bytes preceding the start-
+         * ing quote character and after Byte 10 must contain the space
+         * character.
+         */
+        bool foundStartQuotePos = false;
+
+        for (std::size_t pos = 10; pos < stringSearchEndPos; ++pos)
+        {
+            const char& c = keywordRecordSpan[pos];
+
+            if (c == '\'')
+            {
+                startQuotePos = pos;
+                foundStartQuotePos = true;
+                break;
+            }
+            else if (!IsSpaceChar(c))
+            {
+                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Non-space character found before start quote"));
+            }
+        }
+
+        if (!foundStartQuotePos)
+        {
+            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Free format string, no start quote found"));
+        }
+    }
+
+    //
+    // Find the string ending quote
+    //
+    std::size_t endQuotePos = 0;
+
+    /**
+     * [4.2.1]
+     * [..] A single quote is represented within a string as two successive single quotes
+     * [..] the closing single quote must occur in or before Byte 80
+     */
+    bool foundEndQuotePos = false;
+
+    for (std::size_t pos = startQuotePos + 1; pos < stringSearchEndPos; ++pos)
+    {
+        const char& c = keywordRecordSpan[pos];
+
+        if (c == '\'')
+        {
+            // If the quote is the last character, then it can't be an escaped single quote, so it's the closing quote
+            if (pos == stringSearchEndPos - 1)
+            {
+                endQuotePos = pos;
+                foundEndQuotePos = true;
+                break;
+            }
+
+            // If the next character is also a quote, then this is an escaped quote definition, so skip forward past it
+            if (keywordRecordSpan[pos+1] == '\'')
+            {
+                pos++;
+            }
+            // Otherwise, if the next character isn't a quote, defining an escaped quote, then we're looking at a closing quote
+            else
+            {
+                endQuotePos = pos;
+                foundEndQuotePos = true;
+                break;
+            }
+        }
+    }
+
+    if (!foundEndQuotePos)
+    {
+        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Failed to find closing quote"));
+    }
+
+    //
+    // Convert the string from an escaped string to a non-escaped string
+    //
+    const auto stringSpan = keywordRecordSpan.subspan(startQuotePos + 1, endQuotePos - startQuotePos - 1);
+
+    std::string stringVal;
+
+    for (std::size_t pos = 0; pos < stringSpan.size(); ++pos)
+    {
+        const char& c = stringSpan[pos];
+
+        stringVal += c;
+
+        // If the char is a quote, add it to the string, but then skip over the next character, which would be another quote
+        if (c == '\'')
+        {
+            pos++;
+        }
+    }
+
+    //
+    // Strip trailing whitespace from the string
+    //
+
+    /**
+     * [4.2.1]
+     * Leading spaces are significant; trailing spaces are not.
+     */
+    while (stringVal.length() > 1 && IsSpaceChar(stringVal.at(stringVal.size() - 1)))
+    {
+        stringVal = stringVal.substr(0, stringVal.size() - 1);
+    }
+
+    return stringVal;
 }
 
 }

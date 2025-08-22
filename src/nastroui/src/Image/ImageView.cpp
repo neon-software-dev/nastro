@@ -178,7 +178,6 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
 
             switch (params.colorMap)
             {
-                case ColorMap::Gray:    { colorPercentages = {0.0}; colormap::ramp::gray(displayValuePercent, colorPercentages->data()); } break;
                 case ColorMap::Fire:    { colorPercentages = {0.0}; colormap::ramp::fire(displayValuePercent, colorPercentages->data()); } break;
                 case ColorMap::Ocean:   { colorPercentages = {0.0}; colormap::ramp::ocean(displayValuePercent, colorPercentages->data()); } break;
                 case ColorMap::Ice:     { colorPercentages = {0.0}; colormap::ramp::ice(displayValuePercent, colorPercentages->data()); } break;

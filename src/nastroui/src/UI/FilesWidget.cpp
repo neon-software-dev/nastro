@@ -18,6 +18,8 @@
 #include <QPainter>
 #include <QHeaderView>
 
+#include <iostream>
+
 namespace Nastro
 {
 
@@ -76,16 +78,22 @@ void FilesWidget::Slot_OnTreeView_Activated(const QModelIndex& index)
         return;
     }
 
-    auto pTreeItem = static_cast<const FilesTreeItem*>(sourceIndex.internalPointer());
+    const auto pTreeItem = static_cast<const FilesTreeItem*>(sourceIndex.internalPointer());
     if (pTreeItem->GetType() != FilesTreeItem::Type::HDU)
     {
         return;
     }
 
-    auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
+    const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
 
-    auto pParentTreeItem =  static_cast<const FilesTreeItem*>(sourceIndex.parent().internalPointer());
-    auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(pParentTreeItem);
+    // Silently ignore empty HDU activations
+    if (pHDUTreeItem->GetHDUType() == NFITS::HDU::Type::Empty)
+    {
+        return;
+    }
+
+    const auto pParentTreeItem =  static_cast<const FilesTreeItem*>(sourceIndex.parent().internalPointer());
+    const auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(pParentTreeItem);
 
     emit Signal_OnHDUActivated(pFITSTreeItem->GetFilePath(), pHDUTreeItem->GetHDUIndex());
 }

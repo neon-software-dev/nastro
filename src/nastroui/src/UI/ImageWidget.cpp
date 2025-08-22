@@ -17,6 +17,8 @@
 #include <QToolButton>
 #include <QMenu>
 #include <QActionGroup>
+#include <QFileDialog>
+#include <QInputDialog>
 
 namespace Nastro
 {
@@ -45,9 +47,9 @@ void AddMenuItems(QMenu* pMenu, QActionGroup* pActionGroup, const QString& check
 void ImageWidget::InitUI()
 {
     //
-    // Image Params Toolbar
+    // Init Image Control Toolbar
     //
-    auto pParamsToolbar = new QToolBar();
+    auto pImageControlToolbar = new QToolBar();
 
     // Invert colors action
         auto pInvertButton = new QToolButton();
@@ -115,7 +117,7 @@ void ImageWidget::InitUI()
                      {"R1", "R2", "R4"});
 
         connect(pColorMapMenu, &QMenu::triggered, [=,this](QAction* pAction){
-            if (pAction->text() == "Gray")  { m_imageViewParams.colorMap = ColorMap::Gray; }
+            if (pAction->text() == "Gray")  { m_imageViewParams.colorMap = ColorMap::CET_L01; } // Note L01 used; it's same as Gray colormap, but a faster LUT
             if (pAction->text() == "Fire")  { m_imageViewParams.colorMap = ColorMap::Fire; }
             if (pAction->text() == "Ocean") { m_imageViewParams.colorMap = ColorMap::Ocean; }
             if (pAction->text() == "Ice")   { m_imageViewParams.colorMap = ColorMap::Ice; }
@@ -165,12 +167,18 @@ void ImageWidget::InitUI()
 
         pColorMapButton->setMenu(pColorMapMenu);
 
+    // Export button
+        auto pExportAction = new QAction(tr("Export"));
+        connect(pExportAction, &QAction::triggered, this, &ImageWidget::Slot_UI_ExportAction_Triggered);
+
     // Build toolbar
-    pParamsToolbar->addWidget(pInvertButton);
-    pParamsToolbar->addSeparator();
-    pParamsToolbar->addWidget(transferFuncButton);
-    pParamsToolbar->addSeparator();
-    pParamsToolbar->addWidget(pColorMapButton);
+    pImageControlToolbar->addWidget(pInvertButton);
+    pImageControlToolbar->addSeparator();
+    pImageControlToolbar->addWidget(transferFuncButton);
+    pImageControlToolbar->addSeparator();
+    pImageControlToolbar->addWidget(pColorMapButton);
+    pImageControlToolbar->addSeparator();
+    pImageControlToolbar->addAction(pExportAction);
 
     //
     // Axis Selection Toolbars
@@ -229,7 +237,7 @@ void ImageWidget::InitUI()
     // Layout
     //
     auto pMainLayout = new QVBoxLayout(this);
-    pMainLayout->addWidget(pParamsToolbar);
+    pMainLayout->addWidget(pImageControlToolbar);
     for (const auto& pSelectionToolbar : pSelectionToolbars)
     {
         pMainLayout->addWidget(pSelectionToolbar);
@@ -255,6 +263,38 @@ void ImageWidget::RebuildImageView()
     }
 
     m_pErrorWidget->setVisible(!imageView.has_value());
+}
+
+void ImageWidget::Slot_UI_ExportAction_Triggered(bool)
+{
+    QString selectedFilter;
+
+    auto fileName = QFileDialog::getSaveFileName(this, "Export Image", QString(), tr("PNG (*.png);;BMP (*.bmp);;JPG (*.jpg);;All files (*)"), &selectedFilter);
+    if (fileName.isEmpty())
+    {
+        return;
+    }
+
+    // If the user chosen a format, but typed in a filename without an extension, append the appropriate extension
+    QFileInfo fileInfo(fileName);
+    if (fileInfo.suffix().isEmpty())
+    {
+        if      (selectedFilter.contains("PNG")) { fileName += ".png"; }
+        else if (selectedFilter.contains("BMP")) { fileName += ".bmp"; }
+        else if (selectedFilter.contains("JPG")) { fileName += ".jpg"; }
+    }
+
+    bool qualityResult{false};
+    const auto selectedQuality = QInputDialog::getInt(this, tr("Image Quality"), tr("Quality (1–100):"), 90, 1, 100, 1, &qualityResult);
+
+    if (!qualityResult)
+    {
+        return;
+    }
+
+    const auto qImage = m_pImageViewWidget->GetCurrentViewRender();
+
+    qImage.save(fileName, nullptr, selectedQuality);
 }
 
 }

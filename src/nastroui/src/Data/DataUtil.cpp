@@ -13,7 +13,7 @@
 namespace Nastro
 {
 
-std::expected<std::unique_ptr<Data>, bool> LoadHDUDataBlocking(const NFITS::FITSFile* pFile, const NFITS::HDU* pHDU)
+std::expected<std::unique_ptr<Data>, bool> LoadHDUDataBlocking_Image(const NFITS::FITSFile* pFile, const NFITS::HDU* pHDU)
 {
     const auto dataByteStart = pHDU->GetDataBlockStartIndex() * NFITS::BLOCK_BYTE_SIZE.value;
     const auto dataByteSize = pHDU->GetDataByteSize();
@@ -32,6 +32,16 @@ std::expected<std::unique_ptr<Data>, bool> LoadHDUDataBlocking(const NFITS::FITS
     }
 
     return std::move(*data);
+}
+
+std::expected<std::unique_ptr<Data>, bool> LoadHDUDataBlocking(const NFITS::FITSFile* pFile, const NFITS::HDU* pHDU)
+{
+    switch (pHDU->type)
+    {
+        case NFITS::HDU::Type::Image: return LoadHDUDataBlocking_Image(pFile, pHDU);
+
+        default: return std::unexpected("LoadHDUDataBlocking: Unsupported HDU type");
+    }
 }
 
 }

@@ -26,7 +26,7 @@ std::optional<const KeywordRecord*> Header::GetFirstKeywordRecord(const std::str
     return std::nullopt;
 }
 
-std::expected<int64_t, Error> Header::GetFirstKeywordRecordAsInteger(const std::string& keywordName) const
+std::expected<int64_t, Error> Header::GetFirstKeywordRecord_AsInteger(const std::string& keywordName) const
 {
     const auto keywordRecord = GetFirstKeywordRecord(keywordName);
     if (!keywordRecord)
@@ -34,7 +34,7 @@ std::expected<int64_t, Error> Header::GetFirstKeywordRecordAsInteger(const std::
         return std::unexpected(Error::Msg(ErrorType::General, "No such keyword record exists: {}", keywordName));
     }
 
-    return (*keywordRecord)->GetKeywordValueAsInteger();
+    return (*keywordRecord)->GetKeywordValue_AsInteger();
 }
 
 }

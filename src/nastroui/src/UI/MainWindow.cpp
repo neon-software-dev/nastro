@@ -27,6 +27,8 @@
 #include <QMdiArea>
 #include <QMdiSubWindow>
 
+#include <iostream>
+
 namespace Nastro
 {
 

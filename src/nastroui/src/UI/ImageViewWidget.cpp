@@ -88,4 +88,15 @@ void ImageViewWidget::wheelEvent(QWheelEvent* pEvent)
     }
 }
 
+QImage ImageViewWidget::GetCurrentViewRender()
+{
+    auto qImage = QImage(viewport()->size(), QImage::Format_ARGB32);
+    qImage.fill(Qt::transparent); // TODO: Make configurable
+
+    auto painter = QPainter(&qImage);
+    render(&painter);
+
+    return qImage;
+}
+
 }

@@ -38,7 +38,7 @@ namespace NFITS
          *
          * @return The integer value of the first matching keyword record, or std::nullopt if no such keyword record exists
          */
-        [[nodiscard]] std::expected<int64_t, Error> GetFirstKeywordRecordAsInteger(const std::string& keywordName) const;
+        [[nodiscard]] std::expected<int64_t, Error> GetFirstKeywordRecord_AsInteger(const std::string& keywordName) const;
 
         /**
          * The header blocks that define this Header

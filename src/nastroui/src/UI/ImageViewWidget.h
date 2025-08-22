@@ -30,6 +30,12 @@ namespace Nastro
 
             void SetImageView(const ImageView& imageView);
 
+            /**
+             * @return A QImage sized the same as this widget, filled with the
+             * current visual contents of the widget
+             */
+            [[nodiscard]] QImage GetCurrentViewRender();
+
         protected:
 
             void resizeEvent(QResizeEvent* pEvent) override;

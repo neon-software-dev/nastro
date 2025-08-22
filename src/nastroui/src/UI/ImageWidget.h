@@ -31,6 +31,10 @@ namespace Nastro
 
             [[nodiscard]] Type GetType() const override { return Type::Image; }
 
+        private slots:
+
+            void Slot_UI_ExportAction_Triggered(bool checked);
+
         private:
 
             void InitUI();

@@ -114,20 +114,24 @@ std::optional<Error> KeywordRecord::GetValidationError() const
     return std::nullopt;
 }
 
-std::expected<int64_t, Error> KeywordRecord::GetKeywordValueAsInteger() const
+std::expected<int64_t, Error> KeywordRecord::GetKeywordValue_AsInteger() const
 {
-    return ParseKeywordValue_AsInteger(
-        std::span<const char>(m_keywordRecord).subspan<10, 70>(),
-        IsMandatoryKeywordName()
-    );
+    return ParseKeywordValue_AsInteger(m_keywordRecord, IsMandatoryKeywordName());
 }
 
-std::expected<double, Error> KeywordRecord::GetKeywordValueAsReal() const
+std::expected<double, Error> KeywordRecord::GetKeywordValue_AsReal() const
 {
-    return ParseKeywordValue_AsReal(
-        std::span<const char>(m_keywordRecord).subspan<10, 70>(),
-        IsMandatoryKeywordName()
-    );
+    return ParseKeywordValue_AsReal(m_keywordRecord, IsMandatoryKeywordName());
+}
+
+std::expected<bool, Error> KeywordRecord::GetKeywordValue_AsLogical() const
+{
+    return ParseKeywordValue_AsLogical(m_keywordRecord, IsMandatoryKeywordName());
+}
+
+std::expected<std::string, Error> KeywordRecord::GetKeywordValue_AsString() const
+{
+    return ParseKeywordValue_AsString(m_keywordRecord, IsMandatoryKeywordName());
 }
 
 }

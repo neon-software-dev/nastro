@@ -6,7 +6,7 @@
  
 #include "FilesModel.h"
 
-#include <NFITS/KeywordName.h>
+#include <NFITS/KeywordCommon.h>
 
 #include <cassert>
 
@@ -137,8 +137,10 @@ std::string GetHDUTypeString(NFITS::HDU::Type type)
 {
     switch (type)
     {
-        case NFITS::HDU::Type::Image: return "Image";
         case NFITS::HDU::Type::Empty: return "Empty";
+        case NFITS::HDU::Type::Image: return "Image";
+        case NFITS::HDU::Type::Table: return "Table";
+        case NFITS::HDU::Type::BinTable: return "BinTable";
     }
 
     assert(false);
@@ -147,14 +149,14 @@ std::string GetHDUTypeString(NFITS::HDU::Type type)
 
 std::string GetImageDetailString(const NFITS::HDU& hdu)
 {
-    const auto naxis = hdu.header.GetFirstKeywordRecordAsInteger(NFITS::KEYWORD_NAME_NAXIS);
+    const auto naxis = hdu.header.GetFirstKeywordRecord_AsInteger(NFITS::KEYWORD_NAME_NAXIS);
     if (!naxis) { return {}; }
 
     std::vector<int64_t> naxisns;
 
     for (int64_t n = 1; n <= *naxis; ++n)
     {
-        const auto naxisn = hdu.header.GetFirstKeywordRecordAsInteger(std::format("{}{}", NFITS::KEYWORD_NAME_NAXIS, n));
+        const auto naxisn = hdu.header.GetFirstKeywordRecord_AsInteger(std::format("{}{}", NFITS::KEYWORD_NAME_NAXIS, n));
         if (!naxis) { return {}; }
 
         naxisns.push_back(*naxisn);
