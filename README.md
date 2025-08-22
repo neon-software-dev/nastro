@@ -20,11 +20,10 @@ Image rendering supports common transfer functions and perceptually uniform colo
 ## Upcoming Work
 
 - More/improved image manipulation controls
-- Exporting of rendered images
 - WCS parsing
 - Per-pixel Color/Physical Value/WCS display
+  Support for viewing table data types
 - Ability to stack/combine images
-- Support for viewing other data types (ascii/binary tables)
 
 ## Building From Source
 
