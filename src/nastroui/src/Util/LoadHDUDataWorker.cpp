@@ -6,7 +6,7 @@
  
 #include "LoadHDUDataWorker.h"
 
-#include "../Data/DataUtil.h"
+#include "NFITS/Data/DataUtil.h"
 
 #include <NFITS/DiskFITSByteSource.h>
 #include <NFITS/FITSFile.h>

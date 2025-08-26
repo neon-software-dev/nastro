@@ -6,7 +6,7 @@
  
 #include "ImageViewWidget.h"
 
-#include "../Data/ImageData.h"
+#include <NFITS/Data/ImageData.h>
 
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>

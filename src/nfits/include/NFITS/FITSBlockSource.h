@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: MIT
  */
  
-#ifndef NFITS_SRC_FITSBLOCKSOURCE_H
-#define NFITS_SRC_FITSBLOCKSOURCE_H
+#ifndef NFITS_INCLUDE_NFITS_FITSBLOCKSOURCE_H
+#define NFITS_INCLUDE_NFITS_FITSBLOCKSOURCE_H
 
-#include "InternalDef.h"
+#include "Def.h"
 
-#include <NFITS/Result.h>
-#include <NFITS/SharedLib.h>
+#include "Result.h"
+#include "SharedLib.h"
 
 #include <expected>
 #include <memory>
@@ -22,7 +22,7 @@ namespace NFITS
     /**
      * Wrapper around an IFITSByteSource which allows for reading/writing FITS blocks
      */
-    class NFITS_LOCAL FITSBlockSource
+    class NFITS_PUBLIC FITSBlockSource
     {
         public:
 
@@ -44,4 +44,4 @@ namespace NFITS
     };
 }
 
-#endif //NFITS_SRC_FITSBLOCKSOURCE_H
+#endif //NFITS_INCLUDE_NFITS_FITSBLOCKSOURCE_H

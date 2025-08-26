@@ -6,11 +6,7 @@
  
 #include <NFITS/Util/Transfer.h>
 #include <NFITS/IFITSByteSource.h>
-#include <NFITS/Def.h>
-
-#include "../FITSBlockSource.h"
-
-#include <array>
+#include <NFITS/FITSBlockSource.h>
 
 namespace NFITS
 {

@@ -6,134 +6,84 @@
  
 #include "ImageView.h"
 
-#include "../Data/ImageData.h"
 #include "../ColorMaps/colormap.h"
 #include "../ColorMaps/cet_lut.h"
 
+#include <NFITS/Data/ImageData.h>
+#include <NFITS/Util/ImageUtil.h>
+
 #include <iostream>
-#include <limits>
-#include <bit>
-#include <cstddef>
 #include <algorithm>
 
 namespace Nastro
 {
 
-template <typename T>
-inline constexpr void SwapEndiannessPacked(T& value) noexcept
+std::pair<double, double> ChoosePhysicalValueRange(const ImageRenderParams& params, const NFITS::PhysicalStats& physicalStats)
 {
-    auto valueBytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-    std::ranges::reverse(valueBytes);
-    value = std::bit_cast<T>(valueBytes);
-}
-
-template <typename DataType>
-double GetPhysicalValue(std::span<const DataType> data,
-                        uintmax_t dataIndex,
-                        double bzero,
-                        double bscale)
-{
-    DataType dataValue = data[dataIndex];
-
-    // FITS data is stored as big endian; swap endianness as needed for the current CPU
-    if constexpr (std::endian::native != std::endian::big)
+    switch (params.scalingRange)
     {
-        SwapEndiannessPacked(dataValue);
-    }
-
-    return bzero + (bscale * static_cast<double>(dataValue));
-}
-
-std::pair<double, double> CalculatePhysicalMinMax(const std::vector<double>& physicalValues)
-{
-    auto physicalValueMin = std::numeric_limits<double>::max();
-    auto physicalValueMax = std::numeric_limits<double>::lowest();
-
-    for (const auto& physicalValue : physicalValues)
-    {
-        physicalValueMin = std::min(physicalValueMin, physicalValue);
-        physicalValueMax = std::max(physicalValueMax, physicalValue);
-    }
-
-    return {physicalValueMin, physicalValueMax};
-}
-
-// For an image with more than 2 dimensions, calculates the data offset (not byte offset) of a particular
-// 2D image slice, defined by selection's values
-uintmax_t CalculateSelectionDataOffset(const ImageView::Selection& selection, const ImageParams& imageParams)
-{
-    uintmax_t dataOffset = 0;
-
-    for (unsigned int n = 2; n < imageParams.naxisns.size(); ++n)
-    {
-        int64_t axisSelection = 0;
-
-        const auto nValue = selection.axisSelection.find(n + 1);
-        if (nValue != selection.axisSelection.cend())
+        case ScalingRange::Full: return {physicalStats.minMax.first, physicalStats.minMax.second};
+        case ScalingRange::p99: return NFITS::CalculatePercentileRange(physicalStats, 0.99f);
+        case ScalingRange::p95: return NFITS::CalculatePercentileRange(physicalStats, 0.95f);
+        case ScalingRange::Custom:
         {
-            axisSelection = nValue->second;
-        }
+            const double min = params.customScalingRangeMin ? *params.customScalingRangeMin : physicalStats.minMax.first;
+            const double max = params.customScalingRangeMax ? *params.customScalingRangeMax : physicalStats.minMax.second;
 
-        uintmax_t prevAxesDataSpan = 1;
-        for (unsigned int p = 0; p < n; ++p)
-        {
-            prevAxesDataSpan *= static_cast<uintmax_t>(imageParams.naxisns.at(p));
-        }
-
-        dataOffset += prevAxesDataSpan * static_cast<uintmax_t>(axisSelection);
-    }
-
-    return dataOffset;
-}
-
-template <typename DataType>
-std::expected<std::vector<double>, bool> ImageDataToPhysicalValues(const ImageView::Selection& selection, const ImageData* pImageData)
-{
-    const auto& imageParams = pImageData->GetParams();
-
-    const auto imageWidth       = imageParams.naxisns.at(0);
-    const auto imageHeight      = imageParams.naxisns.at(1);
-    const auto sliceDataOffset  = CalculateSelectionDataOffset(selection, imageParams);
-
-    // Interpret the image data as an array of the specific data type values
-    const auto typedImageData = std::span<const DataType>(
-        reinterpret_cast<const DataType*>(pImageData->GetData().data()),
-        pImageData->GetData().size_bytes() / sizeof(DataType)
-    );
-
-    std::vector<double> physicalValues;
-    physicalValues.reserve((std::size_t)imageWidth * (std::size_t)imageHeight);
-
-    for (int64_t y = 0; y < imageHeight; ++y)
-    {
-        for (int64_t x = 0; x < imageWidth; ++x)
-        {
-            const auto dataIndex = static_cast<uintmax_t>(x + (y * imageWidth)) + sliceDataOffset;
-            const auto physicalValue = GetPhysicalValue(typedImageData, dataIndex, imageParams.bZero, imageParams.bScale);
-
-            physicalValues.push_back(physicalValue);
+            return {min, max};
         }
     }
 
-    return physicalValues;
+    assert(false);
+    return {0.0, 0.0};
 }
 
-QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* pImageData, const std::vector<double>& physicalValues)
+std::expected<QImage, bool> PhysicalValuesToQImage(const NFITS::ImageSlice& slice,
+                                                   const ImageRenderParams& params,
+                                                   const NFITS::ImageData* pImageData)
 {
-    const auto& imageParams = pImageData->GetParams();
+    const auto& metadata = pImageData->GetMetadata();
+    const auto& imageWidth = metadata.naxisns.at(0);
+    const auto& imageHeight = metadata.naxisns.at(1);
 
-    const auto imageWidth = imageParams.naxisns.at(0);
-    const auto imageHeight = imageParams.naxisns.at(1);
+    //
+    // Fetch the physical stats of the data to be rendered
+    //
+    std::optional<NFITS::PhysicalStats> physicalStats;
 
-    // Note that even though the image's datamin/datamax may be provided in params, we're calculating them ourselves
-    // instead. It's slower, but there's FITS files with invalid datamin/datamax values provided.
-    const auto physicalMinMax = CalculatePhysicalMinMax(physicalValues);
-    const auto physicalValueMin = physicalMinMax.first;
-    const auto physicalValueMax = physicalMinMax.second;
+    switch (params.scalingMode)
+    {
+        case ScalingMode::PerImage: { physicalStats = pImageData->GetSlicePhysicalStats(slice); } break;
+        case ScalingMode::PerCube:  { physicalStats = pImageData->GetSliceCubePhysicalStats(slice); } break;
+    }
 
-    const double physicalValueRange = physicalValueMax - physicalValueMin;
+    if (!physicalStats)
+    {
+        std::cerr << "RenderImageData: Failed to determine slice physical stats" << std::endl;
+        return std::unexpected(false);
+    }
 
+    //
+    // Determine min/max physical values to use
+    //
+    const auto chosenRange = ChoosePhysicalValueRange(params, *physicalStats);
+    const auto physicalValueMin = chosenRange.first;
+    const auto physicalValueMax = chosenRange.second;
+    const auto physicalValueRange = physicalValueMax - physicalValueMin;
+
+    //
+    // Fetch a span over the slice's physical values
+    //
+    const auto slicePhysicalValues = pImageData->GetSlicePhysicalValues(slice);
+    if (!slicePhysicalValues)
+    {
+        std::cerr << "RenderImageData: Invalid slice provided" << std::endl;
+        return std::unexpected(false);
+    }
+
+    //
     // Create a QImage and fill it with interpreted image data
+    //
     auto qImage = QImage(static_cast<int>(imageWidth), static_cast<int>(imageHeight), QImage::Format::Format_RGB888);
 
     for (int64_t y = 0; y < imageHeight; ++y)
@@ -147,27 +97,26 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
         {
             const auto physicalValueIndex = static_cast<uintmax_t>(x + (y * imageWidth));
 
-            const double physicalValue = physicalValues.at(physicalValueIndex);
+            const double physicalValue = std::clamp((*slicePhysicalValues)[physicalValueIndex], physicalValueMin, physicalValueMax);
 
             double norm = (physicalValue - physicalValueMin) / physicalValueRange;
 
-            // Force clamp norm to be within [0.0..1.0]. There's edge cases where a file provides DATAMIN/DATAMAX that
-            // are specified in a lower level of precision, and when we do the math to calculate physical value, for the
-            // values that are at min/max, we can end up with some extra precision randomness in the calculated physical value
-            // where when we calculate the norm above, it causes norm to be extremely slightly below/above 0.0..1.0
+            // Force clamp norm to be within [0.0..1.0]. Shouldn't ever be outside this range though, unless
+            // floating imprecision when calculating norm caused it to drift ever so slightly out of range
             norm = std::clamp(norm, 0.0, 1.0);
 
             //
             // Apply transfer function to map normalized value to display value
             //
-            double displayValuePercent = 0.0;
+            double displayValue = 0.0; // [0..1]
 
             switch (params.transferFunction)
             {
-                case TransferFunction::Linear:  displayValuePercent = norm; break;
-                case TransferFunction::Log:     displayValuePercent = std::log1p(norm * (params.logTransferBase - 1.0)) / std::log(params.logTransferBase); break;
-                case TransferFunction::Sqrt:    displayValuePercent = std::pow(norm, 1.0 / 2.0); break;
-                case TransferFunction::Square:  displayValuePercent = std::pow(norm, 1.0 / 0.5); break;
+                case TransferFunction::Linear:  displayValue = norm; break;
+                case TransferFunction::Log:     displayValue = std::log1p(norm * (params.logTransferBase - 1.0)) / std::log(params.logTransferBase); break;
+                case TransferFunction::Sqrt:    displayValue = std::pow(norm, 1.0 / 2.0); break;
+                case TransferFunction::Square:  displayValue = std::pow(norm, 1.0 / 0.5); break;
+                case TransferFunction::Asinh:   displayValue = asinh(params.asinhTransferScale * norm) / asinh(params.asinhTransferScale); break;
             }
 
             //
@@ -178,9 +127,9 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
 
             switch (params.colorMap)
             {
-                case ColorMap::Fire:    { colorPercentages = {0.0}; colormap::ramp::fire(displayValuePercent, colorPercentages->data()); } break;
-                case ColorMap::Ocean:   { colorPercentages = {0.0}; colormap::ramp::ocean(displayValuePercent, colorPercentages->data()); } break;
-                case ColorMap::Ice:     { colorPercentages = {0.0}; colormap::ramp::ice(displayValuePercent, colorPercentages->data()); } break;
+                case ColorMap::Fire:    { colorPercentages = {0.0}; colormap::ramp::fire(displayValue, colorPercentages->data()); } break;
+                case ColorMap::Ocean:   { colorPercentages = {0.0}; colormap::ramp::ocean(displayValue, colorPercentages->data()); } break;
+                case ColorMap::Ice:     { colorPercentages = {0.0}; colormap::ramp::ice(displayValue, colorPercentages->data()); } break;
 
                 case ColorMap::CET_L01: { cet_lut = &CET::L01; } break;
                 case ColorMap::CET_L02: { cet_lut = &CET::L02; } break;
@@ -233,7 +182,7 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
             else if (cet_lut)
             {
                 // Use displayValuePercent to index into the LUT and copy RGB color bytes from it
-                const std::size_t offset = static_cast<unsigned char>(displayValuePercent * 255.0) * 3;
+                const std::size_t offset = static_cast<unsigned char>(displayValue * 255.0) * 3;
                 std::copy_n((*cet_lut)->cbegin() + offset, 3, rgbColors.begin());
             }
 
@@ -250,35 +199,8 @@ QImage PhysicalValuesToQImage(const ImageView::Params& params, const ImageData* 
     return qImage;
 }
 
-std::expected<QImage, bool> ImageDataToQImage(const ImageView::Selection& selection, const ImageView::Params& params, const ImageData* pImageData)
+void ApplyPostProcessing(QImage& qImage, const ImageRenderParams& params)
 {
-    std::expected<std::vector<double>, bool> physicalValues;
-
-    //
-    // Convert image data values to physical values
-    //
-    switch (pImageData->GetParams().bitpix)
-    {
-        case 8: physicalValues      = ImageDataToPhysicalValues<uint8_t>(selection, pImageData); break;
-        case 16: physicalValues     = ImageDataToPhysicalValues<int16_t>(selection, pImageData); break;
-        case 32: physicalValues     = ImageDataToPhysicalValues<int32_t>(selection, pImageData); break;
-        case -32: physicalValues    = ImageDataToPhysicalValues<float>(selection, pImageData); break;
-        case -64: physicalValues    = ImageDataToPhysicalValues<double>(selection, pImageData); break;
-        default: return std::unexpected(false);
-    }
-    if (!physicalValues)
-    {
-        return std::unexpected(false);
-    }
-
-    //
-    // Convert physical values to a displayable QImage
-    //
-    auto qImage = PhysicalValuesToQImage(params, pImageData, *physicalValues);
-
-    //
-    // Apply pixel post-processing
-    //
     for (int y = 0; y < qImage.height(); ++y)
     {
         auto pScanline = qImage.scanLine(y);
@@ -294,33 +216,50 @@ std::expected<QImage, bool> ImageDataToQImage(const ImageView::Selection& select
             }
         }
     }
-
-    return qImage;
 }
 
-std::expected<ImageView, bool> ImageView::From(const Selection& selection, const Params& params, const ImageData* pImageData)
+std::expected<QImage, bool> RenderImageData(const NFITS::ImageSlice& slice, const ImageRenderParams& params, const NFITS::ImageData* pImageData)
 {
-    const auto& imageParams = pImageData->GetParams();
+    //
+    // Process the slice's physical values into a rendered image
+    //
+    auto sliceImage = PhysicalValuesToQImage(slice, params, pImageData);
+    if (!sliceImage)
+    {
+        return std::unexpected(false);
+    }
 
+    //
+    // Apply post-processing to the rendered image
+    //
+    ApplyPostProcessing(*sliceImage, params);
+
+    return sliceImage;
+}
+
+std::expected<ImageView, bool> ImageView::From(const NFITS::ImageSlice& slice, const ImageRenderParams& params, const NFITS::ImageData* pImageData)
+{
     //
     // Sanity test validation
     //
-    if (imageParams.naxisns.size() < 2)
+    const auto& metadata = pImageData->GetMetadata();
+
+    if (metadata.naxisns.size() < 2)
     {
         std::cerr << "ImageView::From: Image data must have at least 2 axes" << std::endl;
         return std::unexpected(false);
     }
 
-    if (pImageData->GetData().empty())
+    if (pImageData->GetPhysicalValues().empty())
     {
         std::cerr << "ImageView::From: Image data is empty" << std::endl;
         return std::unexpected(false);
     }
 
     //
-    // Convert image data to a QImage
+    // Render the image data
     //
-    const auto qImage = ImageDataToQImage(selection, params, pImageData);
+    const auto qImage = RenderImageData(slice, params, pImageData);
     if (!qImage)
     {
         return std::unexpected(false);

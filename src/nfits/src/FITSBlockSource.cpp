@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
  
-#include "FITSBlockSource.h"
-
+#include <NFITS/FITSBlockSource.h>
 #include <NFITS/IFITSByteSource.h>
 #include <NFITS/Def.h>
 

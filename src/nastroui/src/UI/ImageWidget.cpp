@@ -8,8 +8,12 @@
 #include "ImageViewWidget.h"
 #include "AxisSliderWidget.h"
 #include "AxisSpinWidget.h"
+#include "HistogramWidget.h"
+#include "ImageControlsToolbar.h"
+#include "ImageRenderToolbar.h"
 
-#include "../Data/ImageData.h"
+#include <NFITS/Data/ImageData.h>
+#include <NFITS/Util/ImageUtil.h>
 
 #include <QToolBar>
 #include <QLabel>
@@ -19,11 +23,12 @@
 #include <QActionGroup>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QSplitter>
 
 namespace Nastro
 {
 
-ImageWidget::ImageWidget(std::filesystem::path filePath, uintmax_t hduIndex, std::unique_ptr<Data> imageData, QWidget* pParent)
+ImageWidget::ImageWidget(std::filesystem::path filePath, uintmax_t hduIndex, std::unique_ptr<NFITS::Data> imageData, QWidget* pParent)
     : MdiHDUWidget(std::move(filePath), hduIndex, pParent)
     , m_imageData(std::move(imageData))
 {
@@ -32,160 +37,27 @@ ImageWidget::ImageWidget(std::filesystem::path filePath, uintmax_t hduIndex, std
 
 ImageWidget::~ImageWidget() = default;
 
-void AddMenuItems(QMenu* pMenu, QActionGroup* pActionGroup, const QString& checkedItem, const QStringList& items)
-{
-    for (const auto& item : items)
-    {
-        auto pAction = pMenu->addAction(item);
-        pAction->setCheckable(true);
-        if (item == checkedItem) { pAction->setChecked(true); }
-
-        pActionGroup->addAction(pAction);
-    }
-}
-
 void ImageWidget::InitUI()
 {
     //
-    // Init Image Control Toolbar
+    // Image Controls Toolbar
     //
-    auto pImageControlToolbar = new QToolBar();
+    m_pImageControlsToolbar = new ImageControlsToolbar();
+    connect(m_pImageControlsToolbar, &ImageControlsToolbar::Signal_OnDisplayHistogramToggled, this, &ImageWidget::Slot_ImageControls_HistogramToggled);
+    connect(m_pImageControlsToolbar, &ImageControlsToolbar::Signal_OnExportTriggered, this, &ImageWidget::Slot_ImageControls_ExportTriggered);
 
-    // Invert colors action
-        auto pInvertButton = new QToolButton();
-        pInvertButton->setCheckable(true);
-        pInvertButton->setText("Invert");
-        pInvertButton->setToolTip(tr("Invert colors"));
-        connect(pInvertButton, &QToolButton::toggled, [this](bool checked){
-            m_imageViewParams.invertColors = checked;
-            RebuildImageView();
-        });
-
-    // Transfer function action
-        auto transferFuncButton = new QToolButton();
-        transferFuncButton->setText("Linear"); // WARNING: Must match default ImageView transfer function value
-        transferFuncButton->setPopupMode(QToolButton::InstantPopup);
-
-        auto transferFuncMenu = new QMenu(transferFuncButton);
-        auto transferFuncGroup = new QActionGroup(transferFuncMenu);
-
-        // WARNING: Must match ImageView transfer func options
-        const auto transferFuncOptions = QStringList{"Linear", "Log", "Sqrt", "Square"};
-        for (const auto& opt : transferFuncOptions)
-        {
-            auto pOptionAction = new QAction(opt, transferFuncGroup);
-            pOptionAction->setCheckable(true);
-
-            transferFuncGroup->addAction(pOptionAction);
-            transferFuncMenu->addAction(pOptionAction);
-        }
-
-        connect(transferFuncMenu, &QMenu::triggered, [=,this](QAction* pAction){
-            if (pAction->text() == "Linear") { m_imageViewParams.transferFunction = TransferFunction::Linear; }
-            if (pAction->text() == "Log") { m_imageViewParams.transferFunction = TransferFunction::Log; }
-            if (pAction->text() == "Sqrt") { m_imageViewParams.transferFunction = TransferFunction::Sqrt; }
-            if (pAction->text() == "Square") { m_imageViewParams.transferFunction = TransferFunction::Square; }
-
-            transferFuncButton->setText(pAction->text());
-
-            RebuildImageView();
-        });
-
-        transferFuncButton->setMenu(transferFuncMenu);
-
-    // Color Map action
-        const auto defaultColorMapValue("Gray"); // WARNING: Must match default ImageView::Params color map value
-
-        auto pColorMapButton = new QToolButton();
-        pColorMapButton->setText(defaultColorMapValue);
-        pColorMapButton->setPopupMode(QToolButton::InstantPopup);
-
-        auto pColorMapMenu = new QMenu(pColorMapButton);
-        auto pColorMapActionGroup = new QActionGroup(pColorMapMenu);
-
-        AddMenuItems(pColorMapMenu, pColorMapActionGroup, defaultColorMapValue,
-                     {"Gray", "Fire", "Ocean", "Ice"});
-
-        AddMenuItems(pColorMapMenu->addMenu("CET Linear"), pColorMapActionGroup, defaultColorMapValue,
-                     {"L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
-                      "L11", "L12", "L13", "L14", "L15", "L16", "L17", "L18", "L19", "L20"});
-
-        AddMenuItems(pColorMapMenu->addMenu("CET Diverging"), pColorMapActionGroup, defaultColorMapValue,
-                     {"D01", "D01A", "D02", "D03", "D04", "D06", "D07", "D08", "D09", "D10", "D13", "R3"});
-
-        AddMenuItems(pColorMapMenu->addMenu("CET Rainbow"), pColorMapActionGroup, defaultColorMapValue,
-                     {"R1", "R2", "R4"});
-
-        connect(pColorMapMenu, &QMenu::triggered, [=,this](QAction* pAction){
-            if (pAction->text() == "Gray")  { m_imageViewParams.colorMap = ColorMap::CET_L01; } // Note L01 used; it's same as Gray colormap, but a faster LUT
-            if (pAction->text() == "Fire")  { m_imageViewParams.colorMap = ColorMap::Fire; }
-            if (pAction->text() == "Ocean") { m_imageViewParams.colorMap = ColorMap::Ocean; }
-            if (pAction->text() == "Ice")   { m_imageViewParams.colorMap = ColorMap::Ice; }
-
-            if (pAction->text() == "L01")   { m_imageViewParams.colorMap = ColorMap::CET_L01; }
-            if (pAction->text() == "L02")   { m_imageViewParams.colorMap = ColorMap::CET_L02; }
-            if (pAction->text() == "L03")   { m_imageViewParams.colorMap = ColorMap::CET_L03; }
-            if (pAction->text() == "L04")   { m_imageViewParams.colorMap = ColorMap::CET_L04; }
-            if (pAction->text() == "L05")   { m_imageViewParams.colorMap = ColorMap::CET_L05; }
-            if (pAction->text() == "L06")   { m_imageViewParams.colorMap = ColorMap::CET_L06; }
-            if (pAction->text() == "L07")   { m_imageViewParams.colorMap = ColorMap::CET_L07; }
-            if (pAction->text() == "L08")   { m_imageViewParams.colorMap = ColorMap::CET_L08; }
-            if (pAction->text() == "L09")   { m_imageViewParams.colorMap = ColorMap::CET_L09; }
-            if (pAction->text() == "L10")   { m_imageViewParams.colorMap = ColorMap::CET_L10; }
-            if (pAction->text() == "L11")   { m_imageViewParams.colorMap = ColorMap::CET_L11; }
-            if (pAction->text() == "L12")   { m_imageViewParams.colorMap = ColorMap::CET_L12; }
-            if (pAction->text() == "L13")   { m_imageViewParams.colorMap = ColorMap::CET_L13; }
-            if (pAction->text() == "L14")   { m_imageViewParams.colorMap = ColorMap::CET_L14; }
-            if (pAction->text() == "L15")   { m_imageViewParams.colorMap = ColorMap::CET_L15; }
-            if (pAction->text() == "L16")   { m_imageViewParams.colorMap = ColorMap::CET_L16; }
-            if (pAction->text() == "L17")   { m_imageViewParams.colorMap = ColorMap::CET_L17; }
-            if (pAction->text() == "L18")   { m_imageViewParams.colorMap = ColorMap::CET_L18; }
-            if (pAction->text() == "L19")   { m_imageViewParams.colorMap = ColorMap::CET_L19; }
-            if (pAction->text() == "L20")   { m_imageViewParams.colorMap = ColorMap::CET_L20; }
-
-            if (pAction->text() == "D01")   { m_imageViewParams.colorMap = ColorMap::CET_D01; }
-            if (pAction->text() == "D01A")   { m_imageViewParams.colorMap = ColorMap::CET_D01A; }
-            if (pAction->text() == "D02")   { m_imageViewParams.colorMap = ColorMap::CET_D02; }
-            if (pAction->text() == "D03")   { m_imageViewParams.colorMap = ColorMap::CET_D03; }
-            if (pAction->text() == "D04")   { m_imageViewParams.colorMap = ColorMap::CET_D04; }
-            if (pAction->text() == "D06")   { m_imageViewParams.colorMap = ColorMap::CET_D06; }
-            if (pAction->text() == "D07")   { m_imageViewParams.colorMap = ColorMap::CET_D07; }
-            if (pAction->text() == "D08")   { m_imageViewParams.colorMap = ColorMap::CET_D08; }
-            if (pAction->text() == "D09")   { m_imageViewParams.colorMap = ColorMap::CET_D09; }
-            if (pAction->text() == "D10")   { m_imageViewParams.colorMap = ColorMap::CET_D10; }
-            if (pAction->text() == "D13")   { m_imageViewParams.colorMap = ColorMap::CET_D13; }
-            if (pAction->text() == "R3")   { m_imageViewParams.colorMap = ColorMap::CET_R3; }
-
-            if (pAction->text() == "R1")   { m_imageViewParams.colorMap = ColorMap::CET_R1; }
-            if (pAction->text() == "R2")   { m_imageViewParams.colorMap = ColorMap::CET_R2; }
-            if (pAction->text() == "R4")   { m_imageViewParams.colorMap = ColorMap::CET_R4; }
-
-            pColorMapButton->setText(pAction->text());
-
-            RebuildImageView();
-        });
-
-        pColorMapButton->setMenu(pColorMapMenu);
-
-    // Export button
-        auto pExportAction = new QAction(tr("Export"));
-        connect(pExportAction, &QAction::triggered, this, &ImageWidget::Slot_UI_ExportAction_Triggered);
-
-    // Build toolbar
-    pImageControlToolbar->addWidget(pInvertButton);
-    pImageControlToolbar->addSeparator();
-    pImageControlToolbar->addWidget(transferFuncButton);
-    pImageControlToolbar->addSeparator();
-    pImageControlToolbar->addWidget(pColorMapButton);
-    pImageControlToolbar->addSeparator();
-    pImageControlToolbar->addAction(pExportAction);
+    //
+    // Image Render Toolbar
+    //
+    m_pImageRenderToolbar = new ImageRenderToolbar();
+    connect(m_pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged, this, &ImageWidget::Slot_ImageRender_ParametersChanged);
 
     //
     // Axis Selection Toolbars
     //
     std::vector<QToolBar*> pSelectionToolbars;
 
-    const auto naxisns = dynamic_cast<const ImageData*>(m_imageData.get())->GetParams().naxisns;
+    const auto naxisns = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetMetadata().naxisns;
 
     // Append axis selection toolbars for every axis past the first two
     for (std::size_t x = 2; x < naxisns.size(); ++x)
@@ -212,8 +84,26 @@ void ImageWidget::InitUI()
         }
 
         connect(pAxisWidget, &AxisWidget::Signal_ValueChanged, [=, this](int val) {
-            m_imageViewSelection.axisSelection.insert_or_assign(static_cast<unsigned int>(x + 1), val);
-            RebuildImageView();
+            m_imageSlice.axisValue.insert_or_assign(static_cast<unsigned int>(x + 1), val);
+
+            const auto scalingPerImage = m_pImageRenderToolbar->GetImageRenderParams().scalingMode == ScalingMode::PerImage;
+
+            // If scaling per image, and slice changed, null out any custom scaling range that might have existed for
+            // the previous slice, don't carry it forward to the new slice. TODO: Evaluate whether or not to uncomment this.
+            /*if (scalingPerImage)
+            {
+                m_pImageRenderToolbar->SetCustomScalingRangeMin(std::nullopt);
+                m_pImageRenderToolbar->SetCustomScalingRangeMax(std::nullopt);
+            }*/
+
+            // Rebuild the image view whenever slice is changed
+            RebuildImageView(m_pImageRenderToolbar->GetImageRenderParams());
+
+            // Rebuild the histogram when slice is changed, if we're in per-image scaling range
+            if (scalingPerImage)
+            {
+                RebuildHistogram();
+            }
         });
 
         auto pSelectionToolbar = new QToolBar();
@@ -228,6 +118,27 @@ void ImageWidget::InitUI()
     m_pImageViewWidget = new ImageViewWidget();
 
     //
+    // Histogram View
+    //
+    m_pHistogramWidget = new HistogramWidget();
+    m_pHistogramWidget->setMinimumHeight(300);
+    m_pHistogramWidget->hide();
+    connect(m_pHistogramWidget, &HistogramWidget::Signal_OnMinVertLineChanged, this, &ImageWidget::Slot_Histogram_MinVertLineChanged);
+    connect(m_pHistogramWidget, &HistogramWidget::Signal_OnMaxVertLineChanged, this, &ImageWidget::Slot_Histogram_MaxVertLineChanged);
+
+    //
+    // Image / Histogram Splitter
+    //
+    auto pSplitter = new QSplitter(Qt::Vertical);
+    pSplitter->setStretchFactor(0, 1); // image expands
+    pSplitter->setStretchFactor(1, 0); // histogram minimal
+
+    pSplitter->addWidget(m_pImageViewWidget);
+    pSplitter->addWidget(m_pHistogramWidget);
+
+    pSplitter->setCollapsible(1, false);
+
+    //
     // Error View
     //
     m_pErrorWidget = new QLabel(tr("Failed to render image"));
@@ -237,26 +148,28 @@ void ImageWidget::InitUI()
     // Layout
     //
     auto pMainLayout = new QVBoxLayout(this);
-    pMainLayout->addWidget(pImageControlToolbar);
+    pMainLayout->addWidget(m_pImageControlsToolbar);
+    pMainLayout->addWidget(m_pImageRenderToolbar);
     for (const auto& pSelectionToolbar : pSelectionToolbars)
     {
         pMainLayout->addWidget(pSelectionToolbar);
     }
-    pMainLayout->addWidget(m_pImageViewWidget, 1);
+    pMainLayout->addWidget(pSplitter, 1);
     pMainLayout->addWidget(m_pErrorWidget);
 
     //
-    // Build the initial image view from our data
+    // Build the image view and histogram from our initial data/params
     //
-    RebuildImageView();
+    RebuildImageView(m_pImageRenderToolbar->GetImageRenderParams());
+    RebuildHistogram();
 }
 
-void ImageWidget::RebuildImageView()
+void ImageWidget::RebuildImageView(const ImageRenderParams& params)
 {
-    const bool isImageData = m_imageData->GetType() == Data::Type::Image;
+    const bool isImageData = m_imageData->GetType() == NFITS::Data::Type::Image;
     assert(isImageData); if (!isImageData) { return; }
 
-    auto imageView = ImageView::From(m_imageViewSelection, m_imageViewParams, dynamic_cast<const ImageData*>(m_imageData.get()));
+    auto imageView = ImageView::From(m_imageSlice, params, dynamic_cast<const NFITS::ImageData*>(m_imageData.get()));
     if (imageView)
     {
         m_pImageViewWidget->SetImageView(*imageView);
@@ -265,7 +178,61 @@ void ImageWidget::RebuildImageView()
     m_pErrorWidget->setVisible(!imageView.has_value());
 }
 
-void ImageWidget::Slot_UI_ExportAction_Triggered(bool)
+void ImageWidget::RebuildHistogram()
+{
+    const auto imageRenderParams = m_pImageRenderToolbar->GetImageRenderParams();
+
+    std::optional<NFITS::PhysicalStats> physicalStats;
+
+    switch (imageRenderParams.scalingMode)
+    {
+        case ScalingMode::PerImage: physicalStats = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetSlicePhysicalStats(m_imageSlice); break;
+        case ScalingMode::PerCube: physicalStats = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetSliceCubePhysicalStats(m_imageSlice); break;
+    }
+
+    if (!physicalStats)
+    {
+        return;
+    }
+
+    std::pair<double, double> scalingRange;
+
+    switch (imageRenderParams.scalingRange)
+    {
+        case ScalingRange::Full:
+        {
+            scalingRange = physicalStats->minMax;
+        }
+        break;
+        case ScalingRange::Custom:
+        {
+            const auto minValue = imageRenderParams.customScalingRangeMin ? *imageRenderParams.customScalingRangeMin : physicalStats->minMax.first;
+            const auto maxValue = imageRenderParams.customScalingRangeMax ? *imageRenderParams.customScalingRangeMax : physicalStats->minMax.second;
+
+            scalingRange = {minValue, maxValue};
+        }
+        break;
+        case ScalingRange::p99:
+        {
+            scalingRange = NFITS::CalculatePercentileRange(*physicalStats, 0.99f);
+        }
+        break;
+        case ScalingRange::p95:
+        {
+            scalingRange = NFITS::CalculatePercentileRange(*physicalStats, 0.95f);
+        }
+        break;
+    }
+
+    m_pHistogramWidget->DisplayHistogram(*physicalStats, scalingRange.first, scalingRange.second);
+}
+
+void ImageWidget::Slot_ImageControls_HistogramToggled(bool checked)
+{
+    m_pHistogramWidget->setVisible(checked);
+}
+
+void ImageWidget::Slot_ImageControls_ExportTriggered(bool)
 {
     QString selectedFilter;
 
@@ -295,6 +262,56 @@ void ImageWidget::Slot_UI_ExportAction_Triggered(bool)
     const auto qImage = m_pImageViewWidget->GetCurrentViewRender();
 
     qImage.save(fileName, nullptr, selectedQuality);
+}
+
+void ImageWidget::Slot_ImageRender_ParametersChanged(const ImageRenderParams& params)
+{
+    //
+    // Take note of relevant parameters which changed, then update our latest render params state
+    //
+    const bool scalingRangeChanged = m_latestImageRenderParams.scalingRange != params.scalingRange;
+
+    m_latestImageRenderParams = params;
+
+    //
+    // Rebuild the image view whenever image render params change
+    //
+    RebuildImageView(params);
+
+    // TODO! Not always, only if scaling range,mode, or custom scale range changed
+    RebuildHistogram();
+
+    //
+    // Special case handling for parameters which changed
+    //
+
+    // If scaling range was newly set to Custom, force the Histogram to open
+    if (scalingRangeChanged && (params.scalingRange == ScalingRange::Custom))
+    {
+        m_pImageControlsToolbar->SetDisplayHistogram(true);
+    }
+}
+
+void ImageWidget::Slot_Histogram_MinVertLineChanged(double physicalValue, bool fromDrag)
+{
+    // If the user is dragging a histogram vert line, force them to Custom scaling range
+    if (fromDrag && (m_latestImageRenderParams.scalingRange != ScalingRange::Custom))
+    {
+        m_pImageRenderToolbar->SetScalingRange(ScalingRange::Custom);
+    }
+
+    m_pImageRenderToolbar->SetCustomScalingRangeMin(physicalValue);
+}
+
+void ImageWidget::Slot_Histogram_MaxVertLineChanged(double physicalValue, bool fromDrag)
+{
+    // If the user is dragging a histogram vert line, force them to Custom scaling range
+    if (fromDrag && (m_latestImageRenderParams.scalingRange != ScalingRange::Custom))
+    {
+        m_pImageRenderToolbar->SetScalingRange(ScalingRange::Custom);
+    }
+
+    m_pImageRenderToolbar->SetCustomScalingRangeMax(physicalValue);
 }
 
 }

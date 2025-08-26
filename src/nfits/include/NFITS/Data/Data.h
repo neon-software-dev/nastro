@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: MIT
  */
  
-#ifndef SRC_DATA_DATA_H
-#define SRC_DATA_DATA_H
+#ifndef NFITS_INCLUDE_NFITS_DATA_DATA_H
+#define NFITS_INCLUDE_NFITS_DATA_DATA_H
 
-namespace Nastro
+#include "../SharedLib.h"
+
+namespace NFITS
 {
-    class Data
+    class NFITS_PUBLIC Data
     {
         public:
 
@@ -26,4 +28,4 @@ namespace Nastro
     };
 }
 
-#endif //SRC_DATA_DATA_H
+#endif //NFITS_INCLUDE_NFITS_DATA_DATA_H

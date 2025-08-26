@@ -6,10 +6,9 @@
  
 #include <NFITS/FITSFile.h>
 #include <NFITS/IFITSByteSource.h>
+#include <NFITS/FITSBlockSource.h>
 #include <NFITS/KeywordRecord.h>
 #include <NFITS/KeywordCommon.h>
-
-#include "FITSBlockSource.h"
 
 namespace NFITS
 {

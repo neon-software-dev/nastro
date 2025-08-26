@@ -6,7 +6,7 @@ project(NASTROUI VERSION 0.0.1 LANGUAGES CXX)
 # Build
 ####
 
-find_package(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS Core Gui Widgets Charts)
 qt_standard_project_setup()
 set(CMAKE_AUTORCC ON)
 
@@ -16,7 +16,6 @@ file(GLOB NASTROUI_UI_SourceFiles CONFIGURE_DEPENDS src/UI/*.cpp src/UI/*.h)
 file(GLOB NASTROUI_VM_SourceFiles CONFIGURE_DEPENDS src/VM/*.cpp src/VM/*.h)
 file(GLOB NASTROUI_Util_SourceFiles CONFIGURE_DEPENDS src/Util/*.cpp src/Util/*.h)
 file(GLOB NASTROUI_Image_SourceFiles CONFIGURE_DEPENDS src/Image/*.cpp src/Image/*.h)
-file(GLOB NASTROUI_Data_SourceFiles CONFIGURE_DEPENDS src/Data/*.cpp src/Data/*.h)
 file(GLOB NASTROUI_ColorMaps_SourceFiles CONFIGURE_DEPENDS src/ColorMaps/*.cpp src/ColorMaps/*.h)
 
 qt_add_executable(nastroui
@@ -26,7 +25,6 @@ qt_add_executable(nastroui
 	${NASTROUI_VM_SourceFiles}
 	${NASTROUI_Util_SourceFiles}
 	${NASTROUI_Image_SourceFiles}
-	${NASTROUI_Data_SourceFiles}
 	${NASTROUI_ColorMaps_SourceFiles}
 )
 
@@ -43,7 +41,7 @@ target_compile_options(nastroui
 target_link_libraries(nastroui
 	PRIVATE
 		NFITS
-		Qt6::Gui Qt6::Widgets # Core already linked by qt_add_executable
+		Qt6::Gui Qt6::Widgets Qt6::Charts # Core already linked by qt_add_executable
 )
 
 set_target_properties(nastroui

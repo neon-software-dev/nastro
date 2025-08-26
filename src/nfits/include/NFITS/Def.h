@@ -20,6 +20,10 @@ namespace NFITS
     constexpr auto KEYWORD_RECORD_BYTE_SIZE = ByteSize(80U);
     constexpr auto KEYWORD_RECORDS_PER_HEADER_BLOCK = 36U;
 
+    using BlockSpan = std::span<std::byte, BLOCK_BYTE_SIZE.value>;
+    using BlockCSpan = std::span<const std::byte, BLOCK_BYTE_SIZE.value>;
+    using BlockBytes = std::array<std::byte, BLOCK_BYTE_SIZE.value>;
+
     using KeywordRecordSpan = std::span<char, KEYWORD_RECORD_BYTE_SIZE.value>;
     using KeywordRecordCSpan = std::span<const char, KEYWORD_RECORD_BYTE_SIZE.value>;
     using KeywordRecordBytes = std::array<char, KEYWORD_RECORD_BYTE_SIZE.value>;

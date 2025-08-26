@@ -41,6 +41,16 @@ namespace NFITS
         [[nodiscard]] std::expected<int64_t, Error> GetFirstKeywordRecord_AsInteger(const std::string& keywordName) const;
 
         /**
+         * Helper method which looks through all header blocks and returns the first KeywordRecord it finds matching
+         * the provided keyword name, interpreted as a real.
+         *
+         * @param keywordName The keyword name to search for
+         *
+         * @return The real value of the first matching keyword record, or std::nullopt if no such keyword record exists
+         */
+        [[nodiscard]] std::expected<double, Error> GetFirstKeywordRecord_AsReal(const std::string& keywordName) const;
+
+        /**
          * The header blocks that define this Header
          */
         std::vector<HeaderBlock> headerBlocks;

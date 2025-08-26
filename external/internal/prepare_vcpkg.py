@@ -43,6 +43,7 @@ def install_dependencies():
 	
     #Install dependencies
     install_dep('qtbase[widgets,gui]', False)
+    install_dep('qtcharts', False)
     install_dep('gtest', False)
 
     print("[Prepared vcpkg]")

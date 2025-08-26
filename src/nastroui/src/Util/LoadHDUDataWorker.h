@@ -12,10 +12,13 @@
 #include <expected>
 #include <filesystem>
 
-namespace Nastro
+namespace NFITS
 {
     class Data;
+}
 
+namespace Nastro
+{
     class LoadHDUDataWorker : public Worker
     {
         Q_OBJECT
@@ -29,14 +32,14 @@ namespace Nastro
 
             [[nodiscard]] std::filesystem::path GetFilePath() const noexcept { return m_filePath; }
             [[nodiscard]] std::size_t GetHDUIndex() const noexcept { return m_hduIndex; }
-            [[nodiscard]] std::optional<std::unique_ptr<Data>>& GetResult() { return m_result; }
+            [[nodiscard]] std::optional<std::unique_ptr<NFITS::Data>>& GetResult() { return m_result; }
 
         private:
 
             std::filesystem::path m_filePath;
             std::size_t m_hduIndex;
 
-            std::optional<std::unique_ptr<Data>> m_result;
+            std::optional<std::unique_ptr<NFITS::Data>> m_result;
     };
 }
 

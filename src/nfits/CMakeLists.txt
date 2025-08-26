@@ -23,16 +23,20 @@ endif()
 
 file(GLOB NFITS_PublicIncludes CONFIGURE_DEPENDS include/NFITS/*.h)
 file(GLOB NFITS_Util_PublicIncludes CONFIGURE_DEPENDS include/NFITS/Util/*.h)
+file(GLOB NFITS_Data_PublicIncludes CONFIGURE_DEPENDS include/NFITS/Data/*.h)
 
 file(GLOB NFITS_SourceFiles CONFIGURE_DEPENDS src/*.cpp src/*.h)
 file(GLOB NFITS_Util_SourceFiles CONFIGURE_DEPENDS src/Util/*.cpp src/Util/*.h)
+file(GLOB NFITS_Data_SourceFiles CONFIGURE_DEPENDS src/Data/*.cpp src/Data/*.h)
 
 add_library(NFITS
 	${NFITS_PublicIncludes}
 	${NFITS_Util_PublicIncludes}
+	${NFITS_Data_PublicIncludes}
 
 	${NFITS_SourceFiles}
 	${NFITS_Util_SourceFiles}
+	${NFITS_Data_SourceFiles}
 )
 
 if (BUILD_SHARED_LIBS)

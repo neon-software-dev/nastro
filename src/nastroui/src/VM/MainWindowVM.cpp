@@ -7,7 +7,7 @@
 #include "MainWindowVM.h"
 #include "VMUtil.h"
 
-#include "../Data/DataUtil.h"
+#include "NFITS/Data/DataUtil.h"
 
 #include "../Util/Common.h"
 #include "../Util/ProgressDialogWork.h"

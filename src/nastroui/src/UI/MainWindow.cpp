@@ -12,14 +12,12 @@
 
 #include "../VM/MainWindowVM.h"
 
-#include "../Data/ImageData.h"
-
 #include "../Util/LoadHDUDataWorker.h"
 #include "../Util/ProgressDialogWork.h"
 
 #include <NFITS/IFITSByteSource.h>
+#include <NFITS/Data/ImageData.h>
 
-#include <QDockWidget>
 #include <QLabel>
 #include <QMenuBar>
 #include <QVBoxLayout>
@@ -169,7 +167,7 @@ void MainWindow::Slot_LoadHDUData_Complete(Nastro::Worker* pWorker)
 
     switch ((*pData)->GetType())
     {
-        case Data::Type::Image:
+        case NFITS::Data::Type::Image:
         {
             auto pImageWidget = new ImageWidget(filePath, hduIndex, std::move(*pData), this);
 
