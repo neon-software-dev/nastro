@@ -9,7 +9,11 @@ nastro is a cross-platform FITS 4.0 Viewer.
 
 Import FITS files and render N-dimensional image data in an MDI work area.
 
-Image rendering supports common transfer functions and perceptually uniform color mappings.
+Image rendering supports:
+- Common transfer functions (linear, log, square, sqrt, asinh)
+- Perceptually uniform color mappings
+- Per-image and Per-cube ranging modes
+- Histogram-based value ranging
 
 *The project is currently under heavy development and far from complete.*
 
