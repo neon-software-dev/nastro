@@ -17,14 +17,6 @@ Image rendering supports common transfer functions and perceptually uniform colo
 
 ![Alt text](screenshots/screenshot1.webp "Screenshot")
 
-## Upcoming Work
-
-- More/improved image manipulation controls
-- WCS parsing
-- Per-pixel Color/Physical Value/WCS display
-  Support for viewing table data types
-- Ability to stack/combine images
-
 ## Building From Source
 
 ### Required build tools:
@@ -34,6 +26,7 @@ Image rendering supports common transfer functions and perceptually uniform colo
 
 ### Required compile dependencies:
 - Qt6 - Core, Gui, Widgets
+- QtCharts
 - Google Test (If building tests)
 
 Either supply these dependencies yourself or use the `prepare_dependencies.py` script in `external` which will use vcpkg to supply these dependencies for you.
