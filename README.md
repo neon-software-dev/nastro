@@ -5,14 +5,14 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) 
 ![Language](https://img.shields.io/badge/language-C++23-green.svg?style=flat-square) 
 
-nastro is a cross-platform FITS 4.0 Viewer.
+nastro is a cross-platform FITS 4.0 file viewer.
 
 Import FITS files and render N-dimensional image data in an MDI work area.
 
-Image rendering supports:
+Image processing supports:
 - Common transfer functions (linear, log, square, sqrt, asinh)
 - Perceptually uniform color mappings
-- Per-image and Per-cube ranging modes
+- Per-slice and per-series ranging modes
 - Histogram-based value ranging
 
 *The project is currently under heavy development and far from complete.*
