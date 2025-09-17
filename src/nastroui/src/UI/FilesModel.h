@@ -86,7 +86,7 @@ namespace Nastro
             [[nodiscard]] std::size_t GetColumnCount() const override { return 1; };
 
             [[nodiscard]] std::size_t GetHDUIndex() const noexcept { return m_hduIndex; }
-            [[nodiscard]] NFITS::HDU::Type GetHDUType() const noexcept { return m_hdu.type; }
+            [[nodiscard]] const NFITS::HDU& GetHDU() const noexcept { return m_hdu; }
 
         private:
 

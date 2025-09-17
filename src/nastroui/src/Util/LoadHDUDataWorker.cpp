@@ -6,19 +6,17 @@
  
 #include "LoadHDUDataWorker.h"
 
-#include "NFITS/Data/DataUtil.h"
-
 #include <NFITS/DiskFITSByteSource.h>
 #include <NFITS/FITSFile.h>
+#include <NFITS/Data/DataUtil.h>
 
 #include <iostream>
 
 namespace Nastro
 {
 
-LoadHDUDataWorker::LoadHDUDataWorker(std::filesystem::path filePath, const std::size_t& hduIndex)
-    : m_filePath(std::move(filePath))
-    , m_hduIndex(hduIndex)
+LoadHDUDataWorker::LoadHDUDataWorker(std::vector<FileHDU> hdus)
+    : m_hdus(std::move(hdus))
 {
 
 }
@@ -27,64 +25,89 @@ LoadHDUDataWorker::~LoadHDUDataWorker() = default;
 
 void LoadHDUDataWorker::DoWork()
 {
-    std::cout << "Loading HDU " << m_hduIndex << " data from file " << m_filePath.filename() << std::endl;
+    std::vector<std::unique_ptr<NFITS::Data>> result;
 
-    emit Signal_StatusMsg(QString::fromStdString(std::format("Opening file: {}", m_filePath.filename().string())));
+    for (const auto& hdu : m_hdus)
+    {
+        auto data = LoadHDU(hdu);
+        if (!data)
+        {
+            return;
+        }
+
+        result.push_back(std::move(*data));
+    }
+
+    m_result = std::move(result);
+    emit Signal_WorkCompleteSuccess();
+}
+
+std::expected<std::unique_ptr<NFITS::Data>, bool> LoadHDUDataWorker::LoadHDU(const FileHDU& hdu)
+{
+    std::cout << "Loading HDU " << hdu.hduIndex << " data from file " << hdu.filePath.filename() << std::endl;
+    emit Signal_StatusMsg(QString::fromStdString(std::format("Opening file: {}", hdu.filePath.filename().string())));
 
     //
     // Open the file path as a FITS byte source
     //
-    auto pByteSource = NFITS::DiskFITSByteSource::Open(m_filePath, false);
+    auto pByteSource = NFITS::DiskFITSByteSource::Open(hdu.filePath, false);
     if (!pByteSource)
     {
         std::cout << "LoadHDUDataWorker::DoWork: Failed to open byte source, error: " << pByteSource.error().msg << std::endl;
         emit Signal_WorkCompleteError();
-        return;
+        return std::unexpected(false);
     }
-
-    if (IsCancelled()) { emit Signal_WorkCancelled(); return; }
+    if (IsCancelled())
+    {
+        emit Signal_WorkCancelled();
+        return std::unexpected(false);
+    }
 
     //
     // Open the FITS byte source as a FITS file
     //
-    emit Signal_StatusMsg(QString::fromStdString(std::format("Parsing file: {}", m_filePath.filename().string())));
+    emit Signal_StatusMsg(QString::fromStdString(std::format("Parsing file: {}", hdu.filePath.filename().string())));
 
     auto pFITSFile = NFITS::FITSFile::OpenBlocking(std::move(*pByteSource));
     if (!pFITSFile)
     {
         std::cout << "LoadHDUDataWorker::DoWork: Failed to open fits file, error: " << pFITSFile.error().msg << std::endl;
         emit Signal_WorkCompleteError();
-        return;
+        return std::unexpected(false);
     }
-
-    if (IsCancelled()) { emit Signal_WorkCancelled(); return; }
+    if (IsCancelled())
+    {
+        emit Signal_WorkCancelled();
+        return std::unexpected(false);
+    }
 
     //
     // Load the HDU's data
     //
     emit Signal_StatusMsg(QString::fromStdString(std::format("Loading HDU data")));
 
-    const auto pHDU = (*pFITSFile)->GetHDU(m_hduIndex);
+    const auto pHDU = (*pFITSFile)->GetHDU(hdu.hduIndex);
     if (!pHDU)
     {
-        std::cout << "LoadHDUDataWorker::DoWork: No such HDU index exists in file: " << m_hduIndex << std::endl;
+        std::cout << "LoadHDUDataWorker::DoWork: No such HDU index exists in file: " << hdu.hduIndex << std::endl;
         emit Signal_WorkCompleteError();
-        return;
+        std::unexpected(false);
     }
 
     auto pHDUData = LoadHDUDataBlocking(pFITSFile->get(), *pHDU);
     if (!pHDUData)
     {
-        std::cerr << "LoadHDUDataWorker::DoWork: Failed to load HDU data" << std::endl;
+        std::cerr << "LoadHDUDataWorker::DoWork: Failed to load HDU data: " << pHDUData.error().msg << std::endl;
         emit Signal_WorkCompleteError();
-        return;
+        std::unexpected(false);
+    }
+    if (IsCancelled())
+    {
+        emit Signal_WorkCancelled();
+        return std::unexpected(false);
     }
 
-    if (IsCancelled()) { emit Signal_WorkCancelled(); return; }
-
-    m_result = std::move(*pHDUData);
-
-    emit Signal_WorkCompleteSuccess();
+    return std::move(*pHDUData);
 }
 
 }

@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: MIT
  */
  
-#include "ImageView.h"
+#include <NFITS/Image/ImageView.h>
 
 #include "../ColorMaps/colormap.h"
 #include "../ColorMaps/cet_lut.h"
 
-#include <NFITS/Data/ImageData.h>
 #include <NFITS/Util/ImageUtil.h>
 
 #include <iostream>
 #include <algorithm>
+#include <cassert>
 
-namespace Nastro
+namespace NFITS
 {
 
 std::pair<double, double> ChoosePhysicalValueRange(const ImageRenderParams& params, const NFITS::PhysicalStats& physicalStats)
@@ -38,14 +38,8 @@ std::pair<double, double> ChoosePhysicalValueRange(const ImageRenderParams& para
     return {0.0, 0.0};
 }
 
-std::expected<QImage, bool> PhysicalValuesToQImage(const NFITS::ImageSlice& slice,
-                                                   const ImageRenderParams& params,
-                                                   const NFITS::ImageData* pImageData)
+std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSlice, const ImageRenderParams& params)
 {
-    const auto& metadata = pImageData->GetMetadata();
-    const auto& imageWidth = metadata.naxisns.at(0);
-    const auto& imageHeight = metadata.naxisns.at(1);
-
     //
     // Fetch the physical stats of the data to be rendered
     //
@@ -53,8 +47,8 @@ std::expected<QImage, bool> PhysicalValuesToQImage(const NFITS::ImageSlice& slic
 
     switch (params.scalingMode)
     {
-        case ScalingMode::PerImage: { physicalStats = pImageData->GetSlicePhysicalStats(slice); } break;
-        case ScalingMode::PerCube:  { physicalStats = pImageData->GetSliceCubePhysicalStats(slice); } break;
+        case ScalingMode::PerImage: { physicalStats = imageSlice.physicalStats; } break;
+        case ScalingMode::PerCube:  { physicalStats = imageSlice.cubePhysicalStats; } break;
     }
 
     if (!physicalStats)
@@ -72,32 +66,22 @@ std::expected<QImage, bool> PhysicalValuesToQImage(const NFITS::ImageSlice& slic
     const auto physicalValueRange = physicalValueMax - physicalValueMin;
 
     //
-    // Fetch a span over the slice's physical values
+    // Fill an ImageRender with interpreted image data
     //
-    const auto slicePhysicalValues = pImageData->GetSlicePhysicalValues(slice);
-    if (!slicePhysicalValues)
-    {
-        std::cerr << "RenderImageData: Invalid slice provided" << std::endl;
-        return std::unexpected(false);
-    }
+    auto imageRender = ImageRender(ImageRender::Format::RGB888, imageSlice.width, imageSlice.height);
 
-    //
-    // Create a QImage and fill it with interpreted image data
-    //
-    auto qImage = QImage(static_cast<int>(imageWidth), static_cast<int>(imageHeight), QImage::Format::Format_RGB888);
-
-    for (int64_t y = 0; y < imageHeight; ++y)
+    for (uint64_t y = 0; y < imageSlice.height; ++y)
     {
-        // FITS convention is for images to be stored bottom to top, while Qt images are stored
-        // top to bottom, so some vertical swapping here to fill the Qt image from bottom up
+        // FITS convention is for images to be stored bottom to top, while our convention is images
+        // are stored top to bottom, so some vertical swapping here to fill the image from bottom up
         // as we read FITS image data from top down
-        uchar* pScanline = qImage.scanLine(static_cast<int>(imageHeight - y - 1));
+        unsigned char* pScanline = imageRender.GetScanLineBytesStart(imageSlice.height - y - 1);
 
-        for (int64_t x = 0; x < imageWidth; ++x)
+        for (uint64_t x = 0; x < imageSlice.width; ++x)
         {
-            const auto physicalValueIndex = static_cast<uintmax_t>(x + (y * imageWidth));
+            const auto physicalValueIndex = x + (y * imageSlice.width);
 
-            const double physicalValue = std::clamp((*slicePhysicalValues)[physicalValueIndex], physicalValueMin, physicalValueMax);
+            const double physicalValue = std::clamp(imageSlice.physicalValues[physicalValueIndex], physicalValueMin, physicalValueMax);
 
             double norm = (physicalValue - physicalValueMin) / physicalValueRange;
 
@@ -187,43 +171,44 @@ std::expected<QImage, bool> PhysicalValuesToQImage(const NFITS::ImageSlice& slic
             }
 
             //
-            // Write final pixel values to the QImage
+            // Write final pixel components to the image render
             //
-            for (unsigned int pos = 0; pos < rgbColors.size(); ++pos)
+            for (unsigned int component = 0; component < rgbColors.size(); ++component)
             {
-                pScanline[(x * 3) + pos] = rgbColors[pos];
+                pScanline[(x * 3) + component] = rgbColors[component];
             }
         }
     }
 
-    return qImage;
+    return imageRender;
 }
 
-void ApplyPostProcessing(QImage& qImage, const ImageRenderParams& params)
+void ApplyPostProcessing(ImageRender& imageRender, const ImageRenderParams& params)
 {
-    for (int y = 0; y < qImage.height(); ++y)
+    for (std::size_t y = 0; y < imageRender.height; ++y)
     {
-        auto pScanline = qImage.scanLine(y);
+        const auto pScanLine = imageRender.GetScanLineBytesStart(y);
 
-        for (int x = 0; x < qImage.width(); ++x)
+        for (std::size_t x = 0; x < imageRender.width; ++x)
         {
             if (params.invertColors)
             {
-                for (int v = 0; v < 3; ++v)
+                for (std::size_t comp = 0; comp < imageRender.BytesPerPixel(); ++comp)
                 {
-                    pScanline[(x * 3) + v] = 255 - pScanline[(x * 3) + v];
+                    const auto scanLineByteIndex = (x * imageRender.BytesPerPixel()) + comp;
+                    pScanLine[scanLineByteIndex] = 255 - pScanLine[scanLineByteIndex];
                 }
             }
         }
     }
 }
 
-std::expected<QImage, bool> RenderImageData(const NFITS::ImageSlice& slice, const ImageRenderParams& params, const NFITS::ImageData* pImageData)
+std::expected<ImageRender, bool> RenderImageData(const ImageSlice& imageSlice, const ImageRenderParams& params)
 {
     //
     // Process the slice's physical values into a rendered image
     //
-    auto sliceImage = PhysicalValuesToQImage(slice, params, pImageData);
+    auto sliceImage = PhysicalValuesToImage(imageSlice, params);
     if (!sliceImage)
     {
         return std::unexpected(false);
@@ -237,39 +222,22 @@ std::expected<QImage, bool> RenderImageData(const NFITS::ImageSlice& slice, cons
     return sliceImage;
 }
 
-std::expected<ImageView, bool> ImageView::From(const NFITS::ImageSlice& slice, const ImageRenderParams& params, const NFITS::ImageData* pImageData)
+std::expected<ImageView, bool> ImageView::From(const ImageSlice& imageSlice, const ImageRenderParams& params)
 {
-    //
-    // Sanity test validation
-    //
-    const auto& metadata = pImageData->GetMetadata();
-
-    if (metadata.naxisns.size() < 2)
-    {
-        std::cerr << "ImageView::From: Image data must have at least 2 axes" << std::endl;
-        return std::unexpected(false);
-    }
-
-    if (pImageData->GetPhysicalValues().empty())
-    {
-        std::cerr << "ImageView::From: Image data is empty" << std::endl;
-        return std::unexpected(false);
-    }
-
     //
     // Render the image data
     //
-    const auto qImage = RenderImageData(slice, params, pImageData);
-    if (!qImage)
+    const auto imageRender = RenderImageData(imageSlice, params);
+    if (!imageRender)
     {
         return std::unexpected(false);
     }
 
-    return ImageView(*qImage);
+    return ImageView(*imageRender);
 }
 
-ImageView::ImageView(QImage image)
-    : m_image(std::move(image))
+ImageView::ImageView(ImageRender image)
+    : m_imageRender(std::move(image))
 {
 
 }

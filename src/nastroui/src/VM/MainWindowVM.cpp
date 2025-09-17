@@ -7,9 +7,6 @@
 #include "MainWindowVM.h"
 #include "VMUtil.h"
 
-#include "NFITS/Data/DataUtil.h"
-
-#include "../Util/Common.h"
 #include "../Util/ProgressDialogWork.h"
 #include "../Util/ImportFilesWorker.h"
 
@@ -91,7 +88,7 @@ void MainWindowVM::OnImportFiles(const std::vector<std::filesystem::path>& fileP
     connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindowVM::Slot_ImportFiles_WorkFinished);
 }
 
-void MainWindowVM::OnHDUActivated(const std::optional<ActivatedHDU>& activatedHDU)
+void MainWindowVM::OnHDUActivated(const std::optional<FileHDU>& activatedHDU)
 {
     UpdateAndEmit(m_activatedHDU, activatedHDU, this, &MainWindowVM::Signal_OnActivatedHDUChanged);
 }

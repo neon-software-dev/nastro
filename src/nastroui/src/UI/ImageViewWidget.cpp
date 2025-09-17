@@ -6,8 +6,6 @@
  
 #include "ImageViewWidget.h"
 
-#include <NFITS/Data/ImageData.h>
-
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>
 #include <QWheelEvent>
@@ -26,16 +24,51 @@ ImageViewWidget::ImageViewWidget(QWidget* pParent)
 
 ImageViewWidget::~ImageViewWidget() = default;
 
-void ImageViewWidget::SetImageView(const ImageView& imageView)
+void ImageViewWidget::SetImageView(const NFITS::ImageView& imageView)
 {
     m_imageView = imageView;
 
     RebuildScene();
 }
 
+static QImage QImageFromImageRender(const NFITS::ImageRender& imageRender)
+{
+    QImage::Format qImageFormat{};
+    switch (imageRender.format)
+    {
+        case NFITS::ImageRender::Format::RGB888: qImageFormat = QImage::Format::Format_RGB888; break;
+    }
+
+    auto qImage = QImage(static_cast<int>(imageRender.width), static_cast<int>(imageRender.height), qImageFormat);
+
+    for (std::size_t y = 0; y < imageRender.height; ++y)
+    {
+        const auto pImageRenderScanLine = imageRender.GetScanLineBytesStart(y);
+        const auto pQImageScanLine = qImage.scanLine(static_cast<int>(y));
+
+        for (std::size_t x = 0; x < imageRender.width; ++x)
+        {
+            for (std::size_t comp = 0; comp < imageRender.BytesPerPixel(); ++comp)
+            {
+                pQImageScanLine[(x * 3) + comp] = pImageRenderScanLine[((x * 3) + comp)];
+            }
+        }
+    }
+
+    return qImage;
+}
+
 void ImageViewWidget::RebuildScene()
 {
-    auto pixmap = QPixmap::fromImage(m_imageView.GetImage());
+    const auto& imageRender = m_imageView.GetImageRender();
+
+    const auto qImage = QImageFromImageRender(imageRender);
+    if (qImage.isNull())
+    {
+        return;
+    }
+
+    const auto pixmap = QPixmap::fromImage(qImage);
     if (pixmap.isNull())
     {
         return;

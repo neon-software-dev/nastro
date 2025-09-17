@@ -9,7 +9,7 @@
 
 #include "ProducedWidgetAction.h"
 
-#include "../Image/ImageCommon.h"
+#include <NFITS/Image/ImageCommon.h>
 
 #include <QToolBar>
 
@@ -23,16 +23,16 @@ namespace Nastro
 
             explicit ImageRenderToolbar(QWidget* pParent = nullptr);
 
-            [[nodiscard]] const ImageRenderParams& GetImageRenderParams() const noexcept { return m_imageRenderParams; }
+            [[nodiscard]] const NFITS::ImageRenderParams& GetImageRenderParams() const noexcept { return m_imageRenderParams; }
 
-            void SetScalingRange(ScalingRange scalingRange);
+            void SetScalingRange(NFITS::ScalingRange scalingRange);
 
             void SetCustomScalingRangeMin(const std::optional<double>& value);
             void SetCustomScalingRangeMax(const std::optional<double>& value);
 
         signals:
 
-            void Signal_OnImageRenderParamsChanged(const ImageRenderParams& imageRenderParams);
+            void Signal_OnImageRenderParamsChanged(const NFITS::ImageRenderParams& imageRenderParams);
 
         private:
 
@@ -56,7 +56,7 @@ namespace Nastro
 
         private:
 
-            ImageRenderParams m_imageRenderParams{};
+            NFITS::ImageRenderParams m_imageRenderParams{};
     };
 }
 

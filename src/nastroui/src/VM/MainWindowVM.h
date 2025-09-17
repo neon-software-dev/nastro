@@ -30,18 +30,18 @@ namespace Nastro
 
             explicit MainWindowVM(QWidget* pParent);
 
-            [[nodiscard]] std::optional<ActivatedHDU> GetActivatedHDU() const noexcept { return m_activatedHDU; }
+            [[nodiscard]] std::optional<FileHDU> GetActivatedHDU() const noexcept { return m_activatedHDU; }
             [[nodiscard]] const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& GetImportedFiles() const noexcept { return m_importedFiles; }
             [[nodiscard]] std::optional<NFITS::HDU> GetImportedFileHDU(const std::filesystem::path& filePath, uintmax_t hduIndex) const;
 
             void OnImportDirectory(const std::filesystem::path& directoryPath);
             void OnImportFiles(const std::vector<std::filesystem::path>& filePaths);
-            void OnHDUActivated(const std::optional<ActivatedHDU>& activatedHDU);
+            void OnHDUActivated(const std::optional<FileHDU>& activatedHDU);
 
         signals:
 
             void Signal_FilesImported(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& files);
-            void Signal_OnActivatedHDUChanged(std::optional<ActivatedHDU> activatedHDU);
+            void Signal_OnActivatedHDUChanged(std::optional<FileHDU> activatedHDU);
 
         private slots:
 
@@ -52,7 +52,7 @@ namespace Nastro
             QWidget* m_pParent;
 
             std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>> m_importedFiles;
-            std::optional<ActivatedHDU> m_activatedHDU;
+            std::optional<FileHDU> m_activatedHDU;
     };
 }
 

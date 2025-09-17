@@ -10,76 +10,51 @@
 #include "Data.h"
 
 #include "../SharedLib.h"
+#include "../Error.h"
 
-#include <vector>
-#include <cstdint>
-#include <span>
+#include "../Image/ImageSliceSource.h"
+
 #include <unordered_map>
+#include <cstdint>
 #include <optional>
-#include <utility>
+#include <vector>
+#include <span>
+#include <memory>
+#include <expected>
 
 namespace NFITS
 {
     class FITSFile;
-    class HDU;
+    struct HDU;
 
-    /**
-     * Contains axis values which specify a 2D slice of a N-dimension image
-     */
-    struct ImageSlice
-    {
-        // Axis values for axis3+. If not set for an axis, slice logic will default the axis value to 0.
-        // axisn [3..naxis] -> axis value [0..naxisn)
-        std::unordered_map<unsigned int, int64_t> axisValue;
-    };
-
-    /**
-     * Contains FITS metadata defining the structure of an image
-     */
-    struct ImageMetadata
-    {
-        int64_t bitpix;
-        std::vector<int64_t> naxisns;
-        double bZero = 0.0;
-        double bScale = 1.0;
-        std::optional<double> dataMin;
-        std::optional<double> dataMax;
-    };
-
-    struct PhysicalStats
-    {
-        std::pair<double, double> minMax;
-
-        std::vector<std::size_t> histogram;
-        std::vector<std::size_t> histogramCumulative;
-    };
-
-    class NFITS_PUBLIC ImageData : public Data
+    class NFITS_PUBLIC ImageData : public Data, public ImageSliceSource
     {
         public:
 
             ImageData() = default;
+            ~ImageData() override = default;
 
-            [[nodiscard]] bool LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU);
+            [[nodiscard]] static std::expected<std::unique_ptr<ImageData>, Error> LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU);
 
+            //
+            // Data
+            //
             [[nodiscard]] Type GetType() const override { return Type::Image; }
 
-            [[nodiscard]] const ImageMetadata& GetMetadata() const noexcept { return m_metadata; }
-
-            [[nodiscard]] std::span<const double> GetPhysicalValues() const noexcept { return m_physicalValues; }
-            [[nodiscard]] std::optional<std::span<const double>> GetSlicePhysicalValues(const ImageSlice& slice) const;
-
-            [[nodiscard]] std::optional<PhysicalStats> GetSlicePhysicalStats(const ImageSlice& slice) const;
-            [[nodiscard]] std::optional<PhysicalStats> GetSliceCubePhysicalStats(const ImageSlice& slice) const;
+            //
+            // ImageSliceSource
+            //
+            [[nodiscard]] ImageSliceSpan GetImageSliceSpan() const override { return m_sliceSpan; }
+            [[nodiscard]] std::optional<ImageSlice> GetImageSlice(const ImageSliceKey& sliceKey) const override;
 
         private:
 
-            [[nodiscard]] std::optional<uintmax_t> GetSliceIndex(const ImageSlice& slice) const;
-            [[nodiscard]] std::optional<uintmax_t> GetSliceCubeIndex(const ImageSlice& slice) const;
+            [[nodiscard]] std::optional<uintmax_t> GetSliceIndex(const ImageSliceKey& sliceKey) const;
+            [[nodiscard]] std::optional<uintmax_t> GetSliceCubeIndex(const ImageSliceKey& sliceKey) const;
 
         private:
 
-            ImageMetadata m_metadata;
+            ImageSliceSpan m_sliceSpan;
             std::vector<double> m_physicalValues;
             std::vector<PhysicalStats> m_slicePhysicalStats;
             std::vector<PhysicalStats> m_sliceCubePhysicalStats;

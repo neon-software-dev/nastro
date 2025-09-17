@@ -20,11 +20,11 @@ namespace Nastro
 
         public:
 
-            AxisSpinWidget(unsigned int axis, int64_t axisn, QWidget* pParent = nullptr);
+            AxisSpinWidget(unsigned int axis, uint64_t axisn, QWidget* pParent = nullptr);
 
         private:
 
-            void InitUI(unsigned int axis, int64_t axisn);
+            void InitUI(unsigned int axis, uint64_t axisn);
     };
 }
 

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
  
-#ifndef SRC_IMAGE_IMAGECOMMON_H
-#define SRC_IMAGE_IMAGECOMMON_H
+#ifndef NFITS_INCLUDE_NFITS_IMAGE_IMAGECOMMON_H
+#define NFITS_INCLUDE_NFITS_IMAGE_IMAGECOMMON_H
 
 #include <unordered_map>
 #include <cstdint>
@@ -13,7 +13,7 @@
 #include <vector>
 #include <utility>
 
-namespace Nastro
+namespace NFITS
 {
     /**
      * Transfer function to map normalized physical value to display value
@@ -101,4 +101,4 @@ namespace Nastro
     };
 }
 
-#endif //SRC_IMAGE_IMAGECOMMON_H
+#endif //NFITS_INCLUDE_NFITS_IMAGE_IMAGECOMMON_H

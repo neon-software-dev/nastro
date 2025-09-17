@@ -17,6 +17,7 @@
 
 #include <NFITS/IFITSByteSource.h>
 #include <NFITS/Data/ImageData.h>
+#include <NFITS/Image/FlattenedImageSliceSource.h>
 
 #include <QLabel>
 #include <QMenuBar>
@@ -26,6 +27,7 @@
 #include <QMdiSubWindow>
 
 #include <iostream>
+#include <ranges>
 
 namespace Nastro
 {
@@ -140,36 +142,57 @@ void MainWindow::Slot_File_Exit_ActionTriggered()
    close();
 }
 
-void MainWindow::Slot_FilesWidget_OnHDUActivated(const std::filesystem::path& filePath, const size_t& hduIndex)
+void MainWindow::Slot_FilesWidget_OnHDUActivated(const FileHDU& activatedHDU)
 {
-    //
-    // Load the specified HDU data from the file
-    //
-    auto pWorker = new LoadHDUDataWorker(filePath, hduIndex);
+    auto pWorker = new LoadHDUDataWorker({activatedHDU});
 
     auto pProgressDialog = new ProgressDialogWork(pWorker, ProgressDialogArgs{.isModal = true, .canBeCancelled = true}, this);
-    connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindow::Slot_LoadHDUData_Complete);
+    connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindow::Slot_OpenHDU_LoadHDUData_Complete);
 }
 
-void MainWindow::Slot_LoadHDUData_Complete(Nastro::Worker* pWorker)
+void MainWindow::Slot_OnCompareImageHDUs(const std::vector<FileHDU>& compares)
+{
+    auto pWorker = new LoadHDUDataWorker(compares);
+
+    auto pProgressDialog = new ProgressDialogWork(pWorker, ProgressDialogArgs{.isModal = true, .canBeCancelled = true}, this);
+    connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindow::Slot_CompareHDUs_LoadHDUData_Complete);
+}
+
+void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
 {
     if (pWorker->IsCancelled()) { return; }
 
     auto pLoadHDUDataWorker = dynamic_cast<LoadHDUDataWorker*>(pWorker);
-    const auto filePath = pLoadHDUDataWorker->GetFilePath();
-    const auto hduIndex = pLoadHDUDataWorker->GetHDUIndex();
 
-    auto& pData = pLoadHDUDataWorker->GetResult();
-    if (!pData)
+    auto& resultsOpt = pLoadHDUDataWorker->GetResult();
+    if (!resultsOpt)
     {
         return;
     }
 
-    switch ((*pData)->GetType())
+    auto results = std::move(resultsOpt.value());
+    if (results.empty())
+    {
+        return;
+    }
+
+    auto pData = std::move(results.at(0));
+
+    const auto hdu = pLoadHDUDataWorker->GetHDUs().at(0);
+    const auto filePath = hdu.filePath;
+    const auto hduIndex = hdu.hduIndex;
+
+    switch (pData->GetType())
     {
         case NFITS::Data::Type::Image:
         {
-            auto pImageWidget = new ImageWidget(filePath, hduIndex, std::move(*pData), this);
+            auto pImageData = std::unique_ptr<NFITS::ImageData>{dynamic_cast<NFITS::ImageData*>(pData.release())};
+
+            const auto pImageWidget = new ImageWidget(
+                std::move(pImageData),
+                FileHDU{.filePath = filePath, .hduIndex = hduIndex},
+                this
+            );
 
             auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
             pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -180,6 +203,65 @@ void MainWindow::Slot_LoadHDUData_Complete(Nastro::Worker* pWorker)
     }
 }
 
+void MainWindow::Slot_CompareHDUs_LoadHDUData_Complete(Nastro::Worker* pWorker)
+{
+    if (pWorker->IsCancelled()) { return; }
+
+    auto pLoadHDUDataWorker = dynamic_cast<LoadHDUDataWorker*>(pWorker);
+
+    auto& resultsOpt = pLoadHDUDataWorker->GetResult();
+    if (!resultsOpt)
+    {
+        return;
+    }
+
+    auto results = std::move(resultsOpt.value());
+    if (results.empty())
+    {
+        return;
+    }
+
+    //
+    // Combine the loaded ImageDatas into a singular FlattenedImageSliceSource
+    //
+    std::vector<std::unique_ptr<NFITS::ImageSliceSource>> sliceSources;
+    std::vector<std::string> sourceDescriptions;
+
+    for (std::size_t x = 0; x < results.size(); ++x)
+    {
+        auto& result = results.at(x);
+        const auto& hdu = pLoadHDUDataWorker->GetHDUs().at(x);
+
+        auto pImageData = std::unique_ptr<NFITS::ImageData>{dynamic_cast<NFITS::ImageData*>(result.release())};
+        sliceSources.push_back(std::move(pImageData));
+
+        sourceDescriptions.push_back(std::format("[{} - HDU {}]",
+                                                 hdu.filePath.filename().string(),
+                                                 hdu.hduIndex));
+    }
+
+    auto flattenedSliceSource = NFITS::FlattenedImageSliceSource::Create(std::move(sliceSources));
+    if (!flattenedSliceSource)
+    {
+        std::cerr << "Failed to create flattened slice source from input sources" << std::endl;
+        return;
+    }
+
+    //
+    // Create an ImageWidget displaying the flattened slice source
+    //
+    const auto sourceDescriptionsCombined = sourceDescriptions | std::views::join_with(std::string(", "));
+    const auto sourceDescriptionsStr = std::string(sourceDescriptionsCombined.cbegin(), sourceDescriptionsCombined.cend());
+    const auto windowTitle = std::format("Comparing: {}", sourceDescriptionsStr);
+
+    const auto pImageWidget = new ImageWidget(std::move(*flattenedSliceSource), std::nullopt, this);
+
+    auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
+    pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
+    pSubWindow->setWindowTitle(QString::fromStdString(windowTitle));
+    pSubWindow->show();
+}
+
 void MainWindow::Slot_UI_MdiArea_SubWindowActivated(QMdiSubWindow* pMdiSubWindow)
 {
     if (pMdiSubWindow == nullptr)
@@ -188,13 +270,8 @@ void MainWindow::Slot_UI_MdiArea_SubWindowActivated(QMdiSubWindow* pMdiSubWindow
         return;
     }
 
-    const auto pMdiHDUWidget = dynamic_cast<const MdiHDUWidget*>(pMdiSubWindow->widget());
-    m_pVM->OnHDUActivated(
-        ActivatedHDU{
-            .filePath = pMdiHDUWidget->GetFilePath(),
-            .hduIndex = pMdiHDUWidget->GetHDUIndex()
-        }
-    );
+    const auto pMdiWidget = dynamic_cast<const MdiWidget*>(pMdiSubWindow->widget());
+    m_pVM->OnHDUActivated(pMdiWidget->GetAssociatedHDU());
 }
 
 void MainWindow::OnViewFiles()
@@ -212,6 +289,7 @@ void MainWindow::OnViewFiles()
     // Otherwise, create the widget and its dock widget
     m_pFilesWidget = new FilesWidget(m_pVM.get(), this);
     connect(*m_pFilesWidget, &FilesWidget::Signal_OnHDUActivated, this, &MainWindow::Slot_FilesWidget_OnHDUActivated);
+    connect(*m_pFilesWidget, &FilesWidget::Signal_OnCompareImageHDUs, this, &MainWindow::Slot_OnCompareImageHDUs);
 
     auto dockWidget = new NastroDockWidget(tr("Imported Files"), this);
     dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);

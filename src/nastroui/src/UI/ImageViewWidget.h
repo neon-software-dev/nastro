@@ -7,7 +7,7 @@
 #ifndef SRC_UI_IMAGEVIEWWIDGET_H
 #define SRC_UI_IMAGEVIEWWIDGET_H
 
-#include "../Image/ImageView.h"
+#include <NFITS/Image/ImageView.h>
 
 #include <QWidget>
 #include <QGraphicsView>
@@ -28,7 +28,7 @@ namespace Nastro
             explicit ImageViewWidget(QWidget* pParent = nullptr);
             ~ImageViewWidget() override;
 
-            void SetImageView(const ImageView& imageView);
+            void SetImageView(const NFITS::ImageView& imageView);
 
             /**
              * @return A QImage sized the same as this widget, filled with the
@@ -47,7 +47,7 @@ namespace Nastro
 
         private:
 
-            ImageView m_imageView;
+            NFITS::ImageView m_imageView;
 
             QGraphicsScene* m_pScene{nullptr};
             QGraphicsPixmapItem* m_pPixmapItem{nullptr};

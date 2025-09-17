@@ -15,8 +15,6 @@ file(GLOB NASTROUI_SourceFiles CONFIGURE_DEPENDS src/*.cpp src/*.h)
 file(GLOB NASTROUI_UI_SourceFiles CONFIGURE_DEPENDS src/UI/*.cpp src/UI/*.h)
 file(GLOB NASTROUI_VM_SourceFiles CONFIGURE_DEPENDS src/VM/*.cpp src/VM/*.h)
 file(GLOB NASTROUI_Util_SourceFiles CONFIGURE_DEPENDS src/Util/*.cpp src/Util/*.h)
-file(GLOB NASTROUI_Image_SourceFiles CONFIGURE_DEPENDS src/Image/*.cpp src/Image/*.h)
-file(GLOB NASTROUI_ColorMaps_SourceFiles CONFIGURE_DEPENDS src/ColorMaps/*.cpp src/ColorMaps/*.h)
 
 qt_add_executable(nastroui
 	${NASTROUI_Resources}
@@ -24,8 +22,6 @@ qt_add_executable(nastroui
 	${NASTROUI_UI_SourceFiles}
 	${NASTROUI_VM_SourceFiles}
 	${NASTROUI_Util_SourceFiles}
-	${NASTROUI_Image_SourceFiles}
-	${NASTROUI_ColorMaps_SourceFiles}
 )
 
 target_compile_features(nastroui

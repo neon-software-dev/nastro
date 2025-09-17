@@ -8,6 +8,7 @@
 #define NFITS_INCLUDE_NFITS_UTIL_IMAGEUTIL_H
 
 #include <NFITS/SharedLib.h>
+
 #include <NFITS/Data/ImageData.h>
 
 #include <utility>

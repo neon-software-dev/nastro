@@ -133,11 +133,15 @@ HDUFilesTreeItem::HDUFilesTreeItem(NFITS::HDU hdu, std::size_t hduIndex, const F
 
 }
 
-std::string GetHDUTypeString(NFITS::HDU::Type type)
+std::string GetHDUTypeString(NFITS::HDU::Type type, bool hasData)
 {
+    if (!hasData)
+    {
+        return "Empty";
+    }
+
     switch (type)
     {
-        case NFITS::HDU::Type::Empty: return "Empty";
         case NFITS::HDU::Type::Image: return "Image";
         case NFITS::HDU::Type::Table: return "Table";
         case NFITS::HDU::Type::BinTable: return "BinTable";
@@ -181,16 +185,18 @@ QVariant HDUFilesTreeItem::GetDisplayData(int column) const
 {
     if (column == COL_FILENAME)
     {
-        const auto typeString = GetHDUTypeString(m_hdu.type);
+        const bool hduHasData = m_hdu.GetDataByteSize() > 0U;
+        const auto typeString = GetHDUTypeString(m_hdu.type, hduHasData);
 
         std::string detailString;
 
-        switch (m_hdu.type)
+        if (hduHasData)
         {
-            case NFITS::HDU::Type::Image:
-                detailString = GetImageDetailString(m_hdu);
-                break;
-            default: /* no-op */ break;
+            switch (m_hdu.type)
+            {
+                case NFITS::HDU::Type::Image: detailString = GetImageDetailString(m_hdu); break;
+                default: /* no-op */ break;
+            }
         }
 
         auto displayString = std::format("HDU {} - {}", m_hduIndex, typeString);
@@ -235,7 +241,7 @@ Qt::ItemFlags FilesModel::flags(const QModelIndex& index) const
         return Qt::NoItemFlags;
     }
 
-    if (!index.parent().parent().isValid())
+    if (!index.parent().isValid())
     {
         // Don't allow selection of top-level items
         return Qt::ItemIsEnabled;

@@ -10,6 +10,8 @@
 #include <NFITS/KeywordRecord.h>
 #include <NFITS/KeywordCommon.h>
 
+#include <numeric>
+
 namespace NFITS
 {
 
@@ -80,85 +82,99 @@ std::expected<Header, Error> ReadHeader(FITSBlockSource& blockSource, uintmax_t 
     return header;
 }
 
-std::expected<uintmax_t, Error> GetHDUDataByteSize_Image(const Header& header)
+std::expected<uintmax_t, Error> GetHDUDataByteSize_Primary(const Header& header)
 {
-    const auto bitpixValue = header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BITPIX);
-    if (!bitpixValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Image: Failed to get BITPIX value")); }
-
+    // NAXIS (required)
     const auto naxisValue = header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_NAXIS);
-    if (!naxisValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Image: Failed to get NAXIS value")); }
+    if (!naxisValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Primary: NAXIS missing or not parseable")); }
 
-    // No image data
-    if (*naxisValue == 0U)
-    {
-        return 0U;
-    }
+    // No data, bail out early
+    // TODO: Random Groups "(however, the random-groups structure described in Sect. 6 has
+    //  NAXIS1 = 0, but will have data following the header if the other
+    //  NAXISn keywords are non-zero)"
+    if (*naxisValue == 0U) { return 0U; }
 
+    // BITPIX (required)
+    const auto bitpixValue = header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BITPIX);
+    if (!bitpixValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Primary: BITPIX missing or not parseable")); }
+
+    // NAXISn (required)
     std::vector<intmax_t> naxisNs;
 
     for (intmax_t n = 0; n < *naxisValue; ++n)
     {
         const auto keywordName = std::format("{}{}", KEYWORD_NAME_NAXIS, n + 1);
         const auto naxisnValue = header.GetFirstKeywordRecord_AsInteger(keywordName);
-        if (!naxisnValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Image: Failed to parse {} value to integer", keywordName)); }
+        if (!naxisnValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Primary: {} missing or not parseable", keywordName)); }
 
         naxisNs.push_back(*naxisnValue);
     }
 
-    // [4.4.1.1.]
-    // "Nbits = |BITPIX| × (NAXIS1 × NAXIS2 × · · · × NAXISm)"
-    auto nbits = std::abs(*bitpixValue);
+    const auto naxisNsProduct = std::accumulate(naxisNs.begin(), naxisNs.end(), 1, std::multiplies<>());
 
-    for (const auto& naxisn : naxisNs)
-    {
-        nbits *= naxisn;
-    }
+    /**
+     * [4.4.1.1. Primary header]
+     * "Nbits = |BITPIX| × (NAXIS1 × NAXIS2 × · · · × NAXISm)"
+     */
+    const auto nbits = std::abs(*bitpixValue) * naxisNsProduct;
 
     const auto dataByteSize = static_cast<uintmax_t>(nbits / 8U);
 
     return dataByteSize;
 }
 
-std::expected<uintmax_t, Error> GetHDUDataByteSize_Table(const Header& header)
+std::expected<uintmax_t, Error> GetHDUDataByteSize_Extension(const Header& header)
 {
-    const auto naxis1Value = header.GetFirstKeywordRecord_AsInteger("NAXIS1");
-    if (!naxis1Value) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Table: Failed to parse NAXIS1 value to integer")); }
+    // NAXIS (required)
+    const auto naxisValue = header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_NAXIS);
+    if (!naxisValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Extension: NAXIS missing or not parseable")); }
 
-    const auto naxis2Value = header.GetFirstKeywordRecord_AsInteger("NAXIS2");
-    if (!naxis2Value) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Table: Failed to parse NAXIS2 value to integer")); }
+    // No data, bail out early
+    // TODO: Random Groups "(however, the random-groups structure described in Sect. 6 has
+    //  NAXIS1 = 0, but will have data following the header if the other
+    //  NAXISn keywords are non-zero)"
+    if (*naxisValue == 0U) { return 0U; }
 
-    return *naxis1Value * *naxis2Value;
-}
+    // BITPIX (required)
+    const auto bitpixValue = header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BITPIX);
+    if (!bitpixValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Extension: BITPIX missing or not parseable")); }
 
-std::expected<uintmax_t, Error> GetHDUDataByteSize_BinTable(const Header& header)
-{
-    const auto naxis1Value = header.GetFirstKeywordRecord_AsInteger("NAXIS1");
-    if (!naxis1Value) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Table: Failed to parse NAXIS1 value to integer")); }
+    // GCOUNT (required)
+    const auto gCountValue = header.GetFirstKeywordRecord_AsInteger("GCOUNT");
+    if (!gCountValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Extension: GCOUNT missing or not parseable")); }
 
-    const auto naxis2Value = header.GetFirstKeywordRecord_AsInteger("NAXIS2");
-    if (!naxis2Value) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Table: Failed to parse NAXIS2 value to integer")); }
+    // PCOUNT (required)
+    const auto pCountValue = header.GetFirstKeywordRecord_AsInteger("PCOUNT");
+    if (!pCountValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Extension: PCOUNT missing or not parseable")); }
 
-    return *naxis1Value * *naxis2Value;
-}
+    // NAXISn (required)
+    std::vector<intmax_t> naxisNs;
 
-std::expected<uintmax_t, Error> GetHDUDataByteSize(const HDU::Type& type, const Header& header)
-{
-    std::expected<uintmax_t, Error> dataBlockCount{};
-
-    switch (type)
+    for (intmax_t n = 0; n < *naxisValue; ++n)
     {
-        case HDU::Type::Empty: dataBlockCount = 0U; break;
-        case HDU::Type::Image: dataBlockCount = GetHDUDataByteSize_Image(header); break;
-        case HDU::Type::Table: dataBlockCount = GetHDUDataByteSize_Table(header); break;
-        case HDU::Type::BinTable: dataBlockCount = GetHDUDataByteSize_BinTable(header); break;
+        const auto keywordName = std::format("{}{}", KEYWORD_NAME_NAXIS, n + 1);
+        const auto naxisnValue = header.GetFirstKeywordRecord_AsInteger(keywordName);
+        if (!naxisnValue) { return std::unexpected(Error::Msg(ErrorType::Parse, "GetHDUDataByteSize_Extension: {} missing or not parseable", keywordName)); }
+
+        naxisNs.push_back(*naxisnValue);
     }
 
-    if (!dataBlockCount)
-    {
-        return std::unexpected(dataBlockCount.error());
-    }
+    const auto naxisNsProduct = std::accumulate(naxisNs.begin(), naxisNs.end(), 1, std::multiplies<>());
 
-    return *dataBlockCount;
+    /**
+     * [4.4.1.2. Conforming extensions]
+     * Nbits = |BITPIX| × GCOUNT × (PCOUNT + NAXIS1 × NAXIS2 × · · · × NAXISm)
+     */
+    const auto nbits = std::abs(*bitpixValue) * *gCountValue * (*pCountValue + naxisNsProduct);
+
+    const auto dataByteSize = static_cast<uintmax_t>(nbits / 8U);
+
+    return dataByteSize;
+}
+
+std::expected<uintmax_t, Error> GetHDUDataByteSize(const Header& header, bool isPrimary)
+{
+    return isPrimary ? GetHDUDataByteSize_Primary(header) : GetHDUDataByteSize_Extension(header);
 }
 
 std::expected<HDU::Type, Error> GetHDUType(const Header& header)
@@ -182,14 +198,7 @@ std::expected<HDU::Type, Error> GetHDUType(const Header& header)
 
     if (*firstKeywordName == KEYWORD_NAME_SIMPLE)
     {
-        // Detect and special case handle empty primary HDUs
-        const auto dataByteSize = GetHDUDataByteSize_Image(header);
-        if (!dataByteSize)
-        {
-            return std::unexpected(Error::Msg(ErrorType::Validation, "GetHDUType: Failed to determine SIMPLE HDU byte size"));
-        }
-
-        return dataByteSize != 0U ? HDU::Type::Image : HDU::Type::Empty;
+        return HDU::Type::Image;
     }
 
     // If not primary/simple HDU, the first keyword must be an XTENSION keyword
@@ -231,7 +240,7 @@ std::expected<HDU, Error> ReadHDU(FITSBlockSource& blockSource, uintmax_t blockS
         return std::unexpected(hduType.error());
     }
 
-    const auto dataByteSize = GetHDUDataByteSize(*hduType, *header);
+    const auto dataByteSize = GetHDUDataByteSize(*header, isPrimary);
     if (!dataByteSize)
     {
         return std::unexpected(dataByteSize.error());
@@ -267,7 +276,9 @@ std::expected<std::vector<HDU>, Error> ReadHDUS(FITSBlockSource& blockSource)
 
     while (blockIndex < *blockCount)
     {
-        auto hdu = ReadHDU(blockSource, blockIndex, blockIndex == 0U);
+        const bool isPrimary = blockIndex == 0U;
+
+        auto hdu = ReadHDU(blockSource, blockIndex, isPrimary);
         if (!hdu)
         {
             return std::unexpected(hdu.error());

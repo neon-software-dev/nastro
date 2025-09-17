@@ -109,7 +109,7 @@ std::optional<Error> KeywordRecord::GetValidationError() const
         return keywordName.error();
     }
 
-    // TODO! Validate value
+    // TODO: Validate value
 
     return std::nullopt;
 }

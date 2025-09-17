@@ -11,21 +11,21 @@
 namespace NFITS
 {
 
-std::expected<std::unique_ptr<Data>, bool> LoadHDUDataBlocking(const FITSFile* pFile, const HDU* pHDU)
+std::expected<std::unique_ptr<Data>, Error> LoadHDUDataBlocking(const FITSFile* pFile, const HDU* pHDU)
 {
     switch (pHDU->type)
     {
         case HDU::Type::Image:
         {
-            auto imageData = std::make_unique<ImageData>();
-            if (!imageData->LoadFromFileBlocking(pFile, pHDU))
+            auto pImageData = ImageData::LoadFromFileBlocking(pFile, pHDU);
+            if (!pImageData)
             {
-                return std::unexpected("LoadHDUDataBlocking: Failed to load data");
+                return std::unexpected(pImageData.error());
             }
-            return imageData;
+            return pImageData;
         }
 
-        default: return std::unexpected("LoadHDUDataBlocking: Unsupported HDU type");
+        default: return std::unexpected(Error::Msg(ErrorType::General, "LoadHDUDataBlocking: Unsupported HDU type"));
     }
 }
 

@@ -15,12 +15,12 @@ namespace Nastro
 {
     static const std::unordered_set<std::string> VALID_FITS_EXTENSIONS = { ".fts", ".fits", ".fit" };
 
-    struct ActivatedHDU
+    struct FileHDU
     {
         std::filesystem::path filePath;
         uintmax_t hduIndex;
 
-        auto operator<=>(const ActivatedHDU&) const = default;
+        auto operator<=>(const FileHDU&) const = default;
     };
 }
 

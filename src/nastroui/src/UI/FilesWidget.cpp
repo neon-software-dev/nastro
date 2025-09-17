@@ -17,6 +17,7 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QHeaderView>
+#include <QToolBar>
 
 #include <iostream>
 
@@ -36,6 +37,17 @@ FilesWidget::FilesWidget(MainWindowVM* pMainWindowVM, QWidget* pParent)
 
 void FilesWidget::InitUI()
 {
+    //
+    // Top Toolbar
+    //
+    auto pTopToolbar = new QToolBar();
+    m_pCompareAction = pTopToolbar->addAction(tr("Compare"));
+    m_pCompareAction->setEnabled(false);
+    connect(m_pCompareAction, &QAction::triggered, this, &FilesWidget::Slot_Compare_ActionTriggered);
+
+    //
+    // Files Tree View
+    //
     m_pTreeViewModel = std::make_unique<FilesModel>();
 
     m_pTreeViewModelSortProxy = std::make_unique<FilesModelSortProxy>();
@@ -45,11 +57,18 @@ void FilesWidget::InitUI()
     m_pTreeView->setModel(m_pTreeViewModelSortProxy.get());
     m_pTreeView->setSortingEnabled(true);
     m_pTreeView->sortByColumn(0, Qt::SortOrder::AscendingOrder);
+    m_pTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_pTreeView->setSelectionBehavior(QAbstractItemView::SelectItems);
     m_pTreeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     connect(m_pTreeView, &QAbstractItemView::activated, this, &FilesWidget::Slot_OnTreeView_Activated);
+    connect(m_pTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FilesWidget::Slot_OnTreeViewModel_SelectionChanged);
 
+    //
+    // Main Layout
+    //
     auto pLayout = new QVBoxLayout(this);
-    pLayout->addWidget(m_pTreeView);
+    pLayout->addWidget(pTopToolbar, 0);
+    pLayout->addWidget(m_pTreeView, 1);
 }
 
 void FilesWidget::BindVM()
@@ -62,40 +81,6 @@ void FilesWidget::BindVM()
 void FilesWidget::InitialState()
 {
     m_pTreeViewModel->AddFiles(m_pMainWindowVM->GetImportedFiles());
-}
-
-void FilesWidget::Slot_OnTreeView_Activated(const QModelIndex& index)
-{
-    if (!index.isValid())
-    {
-        return;
-    }
-
-    //const auto sourceIndex = index;
-    const auto sourceIndex = m_pTreeViewModelSortProxy->mapToSource(index);
-    if (!sourceIndex.isValid())
-    {
-        return;
-    }
-
-    const auto pTreeItem = static_cast<const FilesTreeItem*>(sourceIndex.internalPointer());
-    if (pTreeItem->GetType() != FilesTreeItem::Type::HDU)
-    {
-        return;
-    }
-
-    const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
-
-    // Silently ignore empty HDU activations
-    if (pHDUTreeItem->GetHDUType() == NFITS::HDU::Type::Empty)
-    {
-        return;
-    }
-
-    const auto pParentTreeItem =  static_cast<const FilesTreeItem*>(sourceIndex.parent().internalPointer());
-    const auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(pParentTreeItem);
-
-    emit Signal_OnHDUActivated(pFITSTreeItem->GetFilePath(), pHDUTreeItem->GetHDUIndex());
 }
 
 void FilesWidget::dragEnterEvent(QDragEnterEvent* pEvent)
@@ -170,6 +155,110 @@ void FilesWidget::paintEvent(QPaintEvent* pEvent)
         p.setBrush(QColor(0, 0, 0, 50));
         p.setPen(Qt::NoPen);
         p.drawRect(rect());
+    }
+}
+
+std::vector<const FilesTreeItem*> FilesWidget::GetSelectedTreeItems() const
+{
+    std::vector<const FilesTreeItem*> selectedTreeItems;
+
+    for (const auto index : m_pTreeView->selectionModel()->selection().indexes())
+    {
+        const auto sourceIndex = m_pTreeViewModelSortProxy->mapToSource(index);
+        if (!sourceIndex.isValid())
+        {
+            continue;
+        }
+
+        selectedTreeItems.push_back(static_cast<const FilesTreeItem*>(sourceIndex.internalPointer()));
+    }
+
+    return selectedTreeItems;
+}
+
+void FilesWidget::Slot_OnTreeView_Activated(const QModelIndex& index)
+{
+    if (!index.isValid())
+    {
+        return;
+    }
+
+    const auto sourceIndex = m_pTreeViewModelSortProxy->mapToSource(index);
+    if (!sourceIndex.isValid())
+    {
+        return;
+    }
+
+    const auto pTreeItem = static_cast<const FilesTreeItem*>(sourceIndex.internalPointer());
+    if (pTreeItem->GetType() != FilesTreeItem::Type::HDU)
+    {
+        return;
+    }
+
+    const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
+
+    // Silently ignore empty HDU activations
+    const bool emptyData = pHDUTreeItem->GetHDU().GetDataByteSize() == 0U;
+    if (emptyData)
+    {
+        return;
+    }
+
+    const auto pParentTreeItem =  static_cast<const FilesTreeItem*>(sourceIndex.parent().internalPointer());
+    const auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(pParentTreeItem);
+
+    emit Signal_OnHDUActivated(FileHDU{.filePath = pFITSTreeItem->GetFilePath(), .hduIndex = pHDUTreeItem->GetHDUIndex()});
+}
+
+void FilesWidget::Slot_OnTreeViewModel_SelectionChanged(const QItemSelection& selected, const QItemSelection& deselected)
+{
+    (void)selected; (void)deselected;
+
+    const auto selectedTreeItems = GetSelectedTreeItems();
+
+    //
+    // Enable the compare action in the case where the selection is 2 or more (non-empty) images
+    //
+    const bool allSelectionImageHDUS = std::ranges::all_of(selectedTreeItems, [](const FilesTreeItem* pTreeItem){
+        if (pTreeItem->GetType() != FilesTreeItem::Type::HDU) { return false; }
+
+        const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
+        if (pHDUTreeItem->GetHDU().type != NFITS::HDU::Type::Image) { return false; }
+
+        if (pHDUTreeItem->GetHDU().dataByteSize == 0) { return false; }
+
+        return true;
+    });
+
+    m_pCompareAction->setEnabled(allSelectionImageHDUS && selectedTreeItems.size() >= 2);
+}
+
+void FilesWidget::Slot_Compare_ActionTriggered(bool)
+{
+    std::vector<FileHDU> compares;
+
+    const auto selectedTreeItems = GetSelectedTreeItems();
+
+    for (const auto& pTreeItem : selectedTreeItems)
+    {
+        if (pTreeItem->GetType() != FilesTreeItem::Type::HDU) { continue; }
+
+        const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
+
+        const bool emptyData = pHDUTreeItem->GetHDU().GetDataByteSize() == 0U;
+        if (emptyData) { continue; }
+
+        const auto pParentTreeItem =  pHDUTreeItem->GetParent();
+        if (!pParentTreeItem) { continue; }
+
+        const auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(*pParentTreeItem);
+
+        compares.push_back(FileHDU{.filePath = pFITSTreeItem->GetFilePath(), .hduIndex = pHDUTreeItem->GetHDUIndex()});
+    }
+
+    if (!compares.empty())
+    {
+        emit Signal_OnCompareImageHDUs(compares);
     }
 }
 

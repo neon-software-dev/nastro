@@ -8,6 +8,7 @@
 #define SRC_UTIL_LOADHDUDATAWORKER_H
 
 #include "Worker.h"
+#include "Common.h"
 
 #include <expected>
 #include <filesystem>
@@ -25,21 +26,23 @@ namespace Nastro
 
         public:
 
-            LoadHDUDataWorker(std::filesystem::path filePath, const std::size_t& hduIndex);
+            LoadHDUDataWorker(std::vector<FileHDU> hdus);
             ~LoadHDUDataWorker() override;
 
             void DoWork() override;
 
-            [[nodiscard]] std::filesystem::path GetFilePath() const noexcept { return m_filePath; }
-            [[nodiscard]] std::size_t GetHDUIndex() const noexcept { return m_hduIndex; }
-            [[nodiscard]] std::optional<std::unique_ptr<NFITS::Data>>& GetResult() { return m_result; }
+            [[nodiscard]] const std::vector<FileHDU>& GetHDUs() const noexcept { return m_hdus; }
+            [[nodiscard]] std::optional<std::vector<std::unique_ptr<NFITS::Data>>>& GetResult() noexcept { return m_result; }
 
         private:
 
-            std::filesystem::path m_filePath;
-            std::size_t m_hduIndex;
+            [[nodiscard]] std::expected<std::unique_ptr<NFITS::Data>, bool> LoadHDU(const FileHDU& hdu);
 
-            std::optional<std::unique_ptr<NFITS::Data>> m_result;
+        private:
+
+            std::vector<FileHDU> m_hdus;
+
+            std::optional<std::vector<std::unique_ptr<NFITS::Data>>> m_result;
     };
 }
 

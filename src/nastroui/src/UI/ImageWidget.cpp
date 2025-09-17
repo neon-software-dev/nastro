@@ -28,9 +28,9 @@
 namespace Nastro
 {
 
-ImageWidget::ImageWidget(std::filesystem::path filePath, uintmax_t hduIndex, std::unique_ptr<NFITS::Data> imageData, QWidget* pParent)
-    : MdiHDUWidget(std::move(filePath), hduIndex, pParent)
-    , m_imageData(std::move(imageData))
+ImageWidget::ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource, std::optional<FileHDU> associatedHDU, QWidget* pParent)
+    : MdiWidget(std::move(associatedHDU), pParent)
+    , m_pImageSliceSource(std::move(pImageSliceSource))
 {
     InitUI();
 }
@@ -57,15 +57,15 @@ void ImageWidget::InitUI()
     //
     std::vector<QToolBar*> pSelectionToolbars;
 
-    const auto naxisns = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetMetadata().naxisns;
+    const auto sliceSpan = m_pImageSliceSource->GetImageSliceSpan();
 
-    // Append axis selection toolbars for every axis past the first two
-    for (std::size_t x = 2; x < naxisns.size(); ++x)
+    // Append axis selection toolbars for every slice axis past the first two
+    for (std::size_t x = 2; x < sliceSpan.size(); ++x)
     {
-        const auto& naxisn = naxisns.at(x);
+        const auto& axisSpan = sliceSpan.at(x);
 
         // Don't provide a selection widget for an axis unless it has a size > 1; nothing to select otherwise
-        if (naxisn <= 1)
+        if (axisSpan <= 1)
         {
             continue;
         }
@@ -75,18 +75,18 @@ void ImageWidget::InitUI()
         // Provide a special slider widget specifically for axis 3
         if (x == 2)
         {
-            pAxisWidget = new AxisSliderWidget(static_cast<unsigned int>(x + 1), naxisn);
+            pAxisWidget = new AxisSliderWidget(static_cast<unsigned int>(x + 1), axisSpan);
         }
         // For all other axes after axis 3, provide a simple spin widget
         else
         {
-            pAxisWidget = new AxisSpinWidget(static_cast<unsigned int>(x + 1), naxisn);
+            pAxisWidget = new AxisSpinWidget(static_cast<unsigned int>(x + 1), axisSpan);
         }
 
         connect(pAxisWidget, &AxisWidget::Signal_ValueChanged, [=, this](int val) {
-            m_imageSlice.axisValue.insert_or_assign(static_cast<unsigned int>(x + 1), val);
+            m_imageSliceKey.insert_or_assign(static_cast<unsigned int>(x + 1), val);
 
-            const auto scalingPerImage = m_pImageRenderToolbar->GetImageRenderParams().scalingMode == ScalingMode::PerImage;
+            const auto scalingPerImage = m_pImageRenderToolbar->GetImageRenderParams().scalingMode == NFITS::ScalingMode::PerImage;
 
             // If scaling per image, and slice changed, null out any custom scaling range that might have existed for
             // the previous slice, don't carry it forward to the new slice. TODO: Evaluate whether or not to uncomment this.
@@ -164,12 +164,15 @@ void ImageWidget::InitUI()
     RebuildHistogram();
 }
 
-void ImageWidget::RebuildImageView(const ImageRenderParams& params)
+void ImageWidget::RebuildImageView(const NFITS::ImageRenderParams& params)
 {
-    const bool isImageData = m_imageData->GetType() == NFITS::Data::Type::Image;
-    assert(isImageData); if (!isImageData) { return; }
+    const auto imageSlice = m_pImageSliceSource->GetImageSlice(m_imageSliceKey);
+    if (!imageSlice)
+    {
+        return;
+    }
 
-    auto imageView = ImageView::From(m_imageSlice, params, dynamic_cast<const NFITS::ImageData*>(m_imageData.get()));
+    auto imageView = NFITS::ImageView::From(*imageSlice, params);
     if (imageView)
     {
         m_pImageViewWidget->SetImageView(*imageView);
@@ -180,51 +183,52 @@ void ImageWidget::RebuildImageView(const ImageRenderParams& params)
 
 void ImageWidget::RebuildHistogram()
 {
+    const auto imageSlice = m_pImageSliceSource->GetImageSlice(m_imageSliceKey);
+    if (!imageSlice)
+    {
+        return;
+    }
+
     const auto imageRenderParams = m_pImageRenderToolbar->GetImageRenderParams();
 
-    std::optional<NFITS::PhysicalStats> physicalStats;
+    NFITS::PhysicalStats physicalStats{};
 
     switch (imageRenderParams.scalingMode)
     {
-        case ScalingMode::PerImage: physicalStats = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetSlicePhysicalStats(m_imageSlice); break;
-        case ScalingMode::PerCube: physicalStats = dynamic_cast<const NFITS::ImageData*>(m_imageData.get())->GetSliceCubePhysicalStats(m_imageSlice); break;
-    }
-
-    if (!physicalStats)
-    {
-        return;
+        case NFITS::ScalingMode::PerImage: physicalStats = imageSlice->physicalStats; break;
+        case NFITS::ScalingMode::PerCube: physicalStats = imageSlice->cubePhysicalStats; break;
     }
 
     std::pair<double, double> scalingRange;
 
     switch (imageRenderParams.scalingRange)
     {
-        case ScalingRange::Full:
+        case NFITS::ScalingRange::Full:
         {
-            scalingRange = physicalStats->minMax;
+            scalingRange = physicalStats.minMax;
         }
         break;
-        case ScalingRange::Custom:
+        case NFITS::ScalingRange::Custom:
         {
-            const auto minValue = imageRenderParams.customScalingRangeMin ? *imageRenderParams.customScalingRangeMin : physicalStats->minMax.first;
-            const auto maxValue = imageRenderParams.customScalingRangeMax ? *imageRenderParams.customScalingRangeMax : physicalStats->minMax.second;
+            const auto minValue = imageRenderParams.customScalingRangeMin ? *imageRenderParams.customScalingRangeMin : physicalStats.minMax.first;
+            const auto maxValue = imageRenderParams.customScalingRangeMax ? *imageRenderParams.customScalingRangeMax : physicalStats.minMax.second;
 
             scalingRange = {minValue, maxValue};
         }
         break;
-        case ScalingRange::p99:
+        case NFITS::ScalingRange::p99:
         {
-            scalingRange = NFITS::CalculatePercentileRange(*physicalStats, 0.99f);
+            scalingRange = NFITS::CalculatePercentileRange(physicalStats, 0.99f);
         }
         break;
-        case ScalingRange::p95:
+        case NFITS::ScalingRange::p95:
         {
-            scalingRange = NFITS::CalculatePercentileRange(*physicalStats, 0.95f);
+            scalingRange = NFITS::CalculatePercentileRange(physicalStats, 0.95f);
         }
         break;
     }
 
-    m_pHistogramWidget->DisplayHistogram(*physicalStats, scalingRange.first, scalingRange.second);
+    m_pHistogramWidget->DisplayHistogram(physicalStats, scalingRange.first, scalingRange.second);
 }
 
 void ImageWidget::Slot_ImageControls_HistogramToggled(bool checked)
@@ -264,7 +268,7 @@ void ImageWidget::Slot_ImageControls_ExportTriggered(bool)
     qImage.save(fileName, nullptr, selectedQuality);
 }
 
-void ImageWidget::Slot_ImageRender_ParametersChanged(const ImageRenderParams& params)
+void ImageWidget::Slot_ImageRender_ParametersChanged(const NFITS::ImageRenderParams& params)
 {
     //
     // Take note of relevant parameters which changed, then update our latest render params state
@@ -278,7 +282,7 @@ void ImageWidget::Slot_ImageRender_ParametersChanged(const ImageRenderParams& pa
     //
     RebuildImageView(params);
 
-    // TODO! Not always, only if scaling range,mode, or custom scale range changed
+    // TODO Perf: Not always, only if scaling range, mode, or custom scale range changed
     RebuildHistogram();
 
     //
@@ -286,7 +290,7 @@ void ImageWidget::Slot_ImageRender_ParametersChanged(const ImageRenderParams& pa
     //
 
     // If scaling range was newly set to Custom, force the Histogram to open
-    if (scalingRangeChanged && (params.scalingRange == ScalingRange::Custom))
+    if (scalingRangeChanged && (params.scalingRange == NFITS::ScalingRange::Custom))
     {
         m_pImageControlsToolbar->SetDisplayHistogram(true);
     }
@@ -295,9 +299,9 @@ void ImageWidget::Slot_ImageRender_ParametersChanged(const ImageRenderParams& pa
 void ImageWidget::Slot_Histogram_MinVertLineChanged(double physicalValue, bool fromDrag)
 {
     // If the user is dragging a histogram vert line, force them to Custom scaling range
-    if (fromDrag && (m_latestImageRenderParams.scalingRange != ScalingRange::Custom))
+    if (fromDrag && (m_latestImageRenderParams.scalingRange != NFITS::ScalingRange::Custom))
     {
-        m_pImageRenderToolbar->SetScalingRange(ScalingRange::Custom);
+        m_pImageRenderToolbar->SetScalingRange(NFITS::ScalingRange::Custom);
     }
 
     m_pImageRenderToolbar->SetCustomScalingRangeMin(physicalValue);
@@ -306,9 +310,9 @@ void ImageWidget::Slot_Histogram_MinVertLineChanged(double physicalValue, bool f
 void ImageWidget::Slot_Histogram_MaxVertLineChanged(double physicalValue, bool fromDrag)
 {
     // If the user is dragging a histogram vert line, force them to Custom scaling range
-    if (fromDrag && (m_latestImageRenderParams.scalingRange != ScalingRange::Custom))
+    if (fromDrag && (m_latestImageRenderParams.scalingRange != NFITS::ScalingRange::Custom))
     {
-        m_pImageRenderToolbar->SetScalingRange(ScalingRange::Custom);
+        m_pImageRenderToolbar->SetScalingRange(NFITS::ScalingRange::Custom);
     }
 
     m_pImageRenderToolbar->SetCustomScalingRangeMax(physicalValue);

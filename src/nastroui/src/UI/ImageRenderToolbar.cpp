@@ -46,7 +46,7 @@ void ImageRenderToolbar::InitUI()
     addAction(new ProducedWidgetAction(this, GetScalingRangeWidgetProducer()));
 }
 
-void ImageRenderToolbar::SetScalingRange(ScalingRange scalingRange)
+void ImageRenderToolbar::SetScalingRange(NFITS::ScalingRange scalingRange)
 {
     UpdateImageRenderParam(m_imageRenderParams.scalingRange, scalingRange);
 }
@@ -99,7 +99,7 @@ WidgetProducer ImageRenderToolbar::GetInvertWidgetProducer()
 
         // Sync the widget to the latest parameter state
         connect(pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged,
-                pInvertButton, [=](const ImageRenderParams& imageRenderParams){
+                pInvertButton, [=](const NFITS::ImageRenderParams& imageRenderParams){
             pInvertButton->setChecked(imageRenderParams.invertColors);
         });
 
@@ -109,12 +109,12 @@ WidgetProducer ImageRenderToolbar::GetInvertWidgetProducer()
     };
 }
 
-static const auto transferFuncStrToTransferFunc = std::unordered_map<QString, TransferFunction>{
-    {"Linear",  TransferFunction::Linear},
-    {"Log",     TransferFunction::Log},
-    {"Sqrt",    TransferFunction::Sqrt},
-    {"Square",  TransferFunction::Square},
-    {"Asinh",   TransferFunction::Asinh}
+static const auto transferFuncStrToTransferFunc = std::unordered_map<QString, NFITS::TransferFunction>{
+    {"Linear",  NFITS::TransferFunction::Linear},
+    {"Log",     NFITS::TransferFunction::Log},
+    {"Sqrt",    NFITS::TransferFunction::Sqrt},
+    {"Square",  NFITS::TransferFunction::Square},
+    {"Asinh",   NFITS::TransferFunction::Asinh}
 };
 
 WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
@@ -129,7 +129,7 @@ WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
         auto transferFuncMenu = new QMenu(pTransferFuncButton);
         auto transferFuncGroup = new QActionGroup(transferFuncMenu);
 
-        auto transferFuncToAction = std::unordered_map<TransferFunction, QAction*>();
+        auto transferFuncToAction = std::unordered_map<NFITS::TransferFunction, QAction*>();
 
         const auto rootTransferFuncOptions = QStringList{"Linear", "Log", "Sqrt", "Square", "Asinh"};
 
@@ -151,7 +151,7 @@ WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
 
         // Sync the widget to the latest parameter state
         connect(pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged,
-                pTransferFuncButton, [=](const ImageRenderParams& params){
+                pTransferFuncButton, [=](const NFITS::ImageRenderParams& params){
             transferFuncToAction.at(params.transferFunction)->trigger();
         });
 
@@ -162,50 +162,50 @@ WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
     };
 }
 
-static const auto colorMapStrToColorMap = std::unordered_map<QString, ColorMap>{
+static const auto colorMapStrToColorMap = std::unordered_map<QString, NFITS::ColorMap>{
     // Base
-    {"Gray",    ColorMap::CET_L01},
-    {"Fire",    ColorMap::Fire},
-    {"Ocean",   ColorMap::Ocean},
-    {"Ice",     ColorMap::Ice},
+    {"Gray",    NFITS::ColorMap::CET_L01},
+    {"Fire",    NFITS::ColorMap::Fire},
+    {"Ocean",   NFITS::ColorMap::Ocean},
+    {"Ice",     NFITS::ColorMap::Ice},
     // Linear
-    {"L01",     ColorMap::CET_L01},
-    {"L02",     ColorMap::CET_L02},
-    {"L03",     ColorMap::CET_L03},
-    {"L04",     ColorMap::CET_L04},
-    {"L05",     ColorMap::CET_L05},
-    {"L06",     ColorMap::CET_L06},
-    {"L07",     ColorMap::CET_L07},
-    {"L08",     ColorMap::CET_L08},
-    {"L09",     ColorMap::CET_L09},
-    {"L10",     ColorMap::CET_L10},
-    {"L11",     ColorMap::CET_L11},
-    {"L12",     ColorMap::CET_L12},
-    {"L13",     ColorMap::CET_L13},
-    {"L14",     ColorMap::CET_L14},
-    {"L15",     ColorMap::CET_L15},
-    {"L16",     ColorMap::CET_L16},
-    {"L17",     ColorMap::CET_L17},
-    {"L18",     ColorMap::CET_L18},
-    {"L19",     ColorMap::CET_L19},
-    {"L20",     ColorMap::CET_L20},
+    {"L01",     NFITS::ColorMap::CET_L01},
+    {"L02",     NFITS::ColorMap::CET_L02},
+    {"L03",     NFITS::ColorMap::CET_L03},
+    {"L04",     NFITS::ColorMap::CET_L04},
+    {"L05",     NFITS::ColorMap::CET_L05},
+    {"L06",     NFITS::ColorMap::CET_L06},
+    {"L07",     NFITS::ColorMap::CET_L07},
+    {"L08",     NFITS::ColorMap::CET_L08},
+    {"L09",     NFITS::ColorMap::CET_L09},
+    {"L10",     NFITS::ColorMap::CET_L10},
+    {"L11",     NFITS::ColorMap::CET_L11},
+    {"L12",     NFITS::ColorMap::CET_L12},
+    {"L13",     NFITS::ColorMap::CET_L13},
+    {"L14",     NFITS::ColorMap::CET_L14},
+    {"L15",     NFITS::ColorMap::CET_L15},
+    {"L16",     NFITS::ColorMap::CET_L16},
+    {"L17",     NFITS::ColorMap::CET_L17},
+    {"L18",     NFITS::ColorMap::CET_L18},
+    {"L19",     NFITS::ColorMap::CET_L19},
+    {"L20",     NFITS::ColorMap::CET_L20},
     // Diverging
-    {"D01",     ColorMap::CET_D01},
-    {"D01A",    ColorMap::CET_D01A},
-    {"D02",     ColorMap::CET_D02},
-    {"D03",     ColorMap::CET_D03},
-    {"D04",     ColorMap::CET_D04},
-    {"D06",     ColorMap::CET_D06},
-    {"D07",     ColorMap::CET_D07},
-    {"D08",     ColorMap::CET_D08},
-    {"D09",     ColorMap::CET_D09},
-    {"D10",     ColorMap::CET_D10},
-    {"D13",     ColorMap::CET_D13},
-    {"R3",      ColorMap::CET_R3},
+    {"D01",     NFITS::ColorMap::CET_D01},
+    {"D01A",    NFITS::ColorMap::CET_D01A},
+    {"D02",     NFITS::ColorMap::CET_D02},
+    {"D03",     NFITS::ColorMap::CET_D03},
+    {"D04",     NFITS::ColorMap::CET_D04},
+    {"D06",     NFITS::ColorMap::CET_D06},
+    {"D07",     NFITS::ColorMap::CET_D07},
+    {"D08",     NFITS::ColorMap::CET_D08},
+    {"D09",     NFITS::ColorMap::CET_D09},
+    {"D10",     NFITS::ColorMap::CET_D10},
+    {"D13",     NFITS::ColorMap::CET_D13},
+    {"R3",      NFITS::ColorMap::CET_R3},
     // Rainbow
-    {"R1",      ColorMap::CET_R1},
-    {"R2",      ColorMap::CET_R2},
-    {"R4",      ColorMap::CET_R4},
+    {"R1",      NFITS::ColorMap::CET_R1},
+    {"R2",      NFITS::ColorMap::CET_R2},
+    {"R4",      NFITS::ColorMap::CET_R4},
 };
 
 WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
@@ -220,7 +220,7 @@ WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
         auto pColorMapMenu = new QMenu(pColorMapButton);
         auto pColorMapGroup = new QActionGroup(pColorMapMenu);
 
-        auto colorMapToAction = std::unordered_map<ColorMap, QAction*>();
+        auto colorMapToAction = std::unordered_map<NFITS::ColorMap, QAction*>();
 
         // Root Color Maps
         const auto rootColorMapOptions = QStringList{"Gray", "Fire", "Ocean", "Ice"};
@@ -280,7 +280,7 @@ WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
 
         // Sync the widget to the latest parameter state
         connect(pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged,
-            pColorMapButton, [=](const ImageRenderParams& params){
+            pColorMapButton, [=](const NFITS::ImageRenderParams& params){
             colorMapToAction.at(params.colorMap)->trigger();
         });
 
@@ -291,9 +291,9 @@ WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
     };
 }
 
-static const auto scalingModeStrToScalingMode = std::unordered_map<QString, ScalingMode>{
-    {"Image Scaled",  ScalingMode::PerImage},
-    {"Cube Scaled",   ScalingMode::PerCube}
+static const auto scalingModeStrToScalingMode = std::unordered_map<QString, NFITS::ScalingMode>{
+    {"Image Scaled",  NFITS::ScalingMode::PerImage},
+    {"Series Scaled",   NFITS::ScalingMode::PerCube}
 };
 
 WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
@@ -308,9 +308,9 @@ WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
         auto scalingModeMenu = new QMenu(pScalingModeButton);
         auto scalingModeGroup = new QActionGroup(scalingModeMenu);
 
-        auto scalingModeToAction = std::unordered_map<ScalingMode, QAction*>();
+        auto scalingModeToAction = std::unordered_map<NFITS::ScalingMode, QAction*>();
 
-        const auto rootScalingModeOptions = QStringList{"Image Scaled", "Cube Scaled"};
+        const auto rootScalingModeOptions = QStringList{"Image Scaled", "Series Scaled"};
 
         for (const auto& scalingModeStr : rootScalingModeOptions)
         {
@@ -330,7 +330,7 @@ WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
 
         // Sync the widget to the latest parameter state
         connect(pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged,
-            pScalingModeButton, [=](const ImageRenderParams& params){
+            pScalingModeButton, [=](const NFITS::ImageRenderParams& params){
             scalingModeToAction.at(params.scalingMode)->trigger();
         });
 
@@ -341,11 +341,11 @@ WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
     };
 }
 
-static const auto scalingRangeStrToScalingRange = std::unordered_map<QString, ScalingRange>{
-    {"Full Range",  ScalingRange::Full},
-    {"p99",         ScalingRange::p99},
-    {"p95",         ScalingRange::p95},
-    {"Custom",      ScalingRange::Custom},
+static const auto scalingRangeStrToScalingRange = std::unordered_map<QString, NFITS::ScalingRange>{
+    {"Full Range",  NFITS::ScalingRange::Full},
+    {"p99",         NFITS::ScalingRange::p99},
+    {"p95",         NFITS::ScalingRange::p95},
+    {"Custom",      NFITS::ScalingRange::Custom},
 };
 
 WidgetProducer ImageRenderToolbar::GetScalingRangeWidgetProducer()
@@ -360,7 +360,7 @@ WidgetProducer ImageRenderToolbar::GetScalingRangeWidgetProducer()
         auto scalingRangeMenu = new QMenu(pScalingRangeButton);
         auto scalingRangeGroup = new QActionGroup(scalingRangeMenu);
 
-        auto scalingRangeToAction = std::unordered_map<ScalingRange, QAction*>();
+        auto scalingRangeToAction = std::unordered_map<NFITS::ScalingRange, QAction*>();
 
         const auto rootScalingRangeOptions = QStringList{"Full Range", "p99", "p95", "Custom"};
 
@@ -382,7 +382,7 @@ WidgetProducer ImageRenderToolbar::GetScalingRangeWidgetProducer()
 
         // Sync the widget to the latest parameter state
         connect(pImageRenderToolbar, &ImageRenderToolbar::Signal_OnImageRenderParamsChanged,
-            pScalingRangeButton, [=](const ImageRenderParams& params){
+            pScalingRangeButton, [=](const NFITS::ImageRenderParams& params){
             scalingRangeToAction.at(params.scalingRange)->trigger();
         });
 

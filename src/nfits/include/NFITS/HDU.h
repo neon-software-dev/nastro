@@ -24,7 +24,6 @@ namespace NFITS
     {
         enum class Type
         {
-            Empty,
             Image,
             Table,
             BinTable
@@ -70,7 +69,7 @@ namespace NFITS
         /**
          * The type of data the HDU contains
          */
-        Type type{Type::Empty};
+        Type type{Type::Image};
 
         /**
          * The block index, within the FITS file, of the HDU's first block

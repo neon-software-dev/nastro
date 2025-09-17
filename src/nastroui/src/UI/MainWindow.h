@@ -7,6 +7,8 @@
 #ifndef SRC_UI_MAINWINDOW_H
 #define SRC_UI_MAINWINDOW_H
 
+#include "../Util/Common.h"
+
 #include <QMainWindow>
 
 #include <filesystem>
@@ -38,9 +40,11 @@ namespace Nastro
             void Slot_File_ImportDirectory_ActionTriggered();
             void Slot_File_Exit_ActionTriggered();
 
-            void Slot_FilesWidget_OnHDUActivated(const std::filesystem::path& filePath, const std::size_t& hduIndex);
+            void Slot_FilesWidget_OnHDUActivated(const FileHDU& activatedHDU);
+            void Slot_OnCompareImageHDUs(const std::vector<FileHDU>& compares);
 
-            void Slot_LoadHDUData_Complete(Nastro::Worker* pWorker);
+            void Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker);
+            void Slot_CompareHDUs_LoadHDUData_Complete(Nastro::Worker* pWorker);
 
             void Slot_UI_MdiArea_SubWindowActivated(QMdiSubWindow* pMdiSubWindow);
 

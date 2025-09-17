@@ -7,9 +7,9 @@
 #ifndef SRC_UI_IMAGEWIDGET_H
 #define SRC_UI_IMAGEWIDGET_H
 
-#include "MdiHDUWidget.h"
+#include "MdiWidget.h"
 
-#include "../Image/ImageView.h"
+#include <NFITS/Image/ImageSliceSource.h>
 
 #include <QWidget>
 
@@ -27,13 +27,20 @@ namespace Nastro
     class ImageControlsToolbar;
     class ImageRenderToolbar;
 
-    class ImageWidget : public MdiHDUWidget
+    /**
+     * Mdi widget which allows the user to view/render the image slices provided by an ImageSliceSource.
+     *
+     * Provides toolbars for selecting image slices, setting render parameters, a view of the rendered slice, and a histogram.
+     */
+    class ImageWidget : public MdiWidget
     {
         Q_OBJECT
 
         public:
 
-            ImageWidget(std::filesystem::path filePath, uintmax_t hduIndex, std::unique_ptr<NFITS::Data> imageData, QWidget* pParent = nullptr);
+            explicit ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource,
+                                 std::optional<FileHDU> associatedHDU = std::nullopt,
+                                 QWidget* pParent = nullptr);
             ~ImageWidget() override;
 
             [[nodiscard]] Type GetType() const override { return Type::Image; }
@@ -43,7 +50,7 @@ namespace Nastro
             void Slot_ImageControls_HistogramToggled(bool checked);
             void Slot_ImageControls_ExportTriggered(bool checked);
 
-            void Slot_ImageRender_ParametersChanged(const ImageRenderParams& params);
+            void Slot_ImageRender_ParametersChanged(const NFITS::ImageRenderParams& params);
 
             void Slot_Histogram_MinVertLineChanged(double physicalValue, bool fromDrag);
             void Slot_Histogram_MaxVertLineChanged(double physicalValue, bool fromDrag);
@@ -52,15 +59,15 @@ namespace Nastro
 
             void InitUI();
 
-            void RebuildImageView(const ImageRenderParams& params);
+            void RebuildImageView(const NFITS::ImageRenderParams& params);
             void RebuildHistogram();
 
         private:
 
-            std::unique_ptr<NFITS::Data> m_imageData;
+            std::unique_ptr<NFITS::ImageSliceSource> m_pImageSliceSource;
 
-            NFITS::ImageSlice m_imageSlice{};
-            ImageRenderParams m_latestImageRenderParams{};
+            NFITS::ImageSliceKey m_imageSliceKey{};
+            NFITS::ImageRenderParams m_latestImageRenderParams{};
 
             ImageControlsToolbar* m_pImageControlsToolbar{nullptr};
             ImageRenderToolbar* m_pImageRenderToolbar{nullptr};

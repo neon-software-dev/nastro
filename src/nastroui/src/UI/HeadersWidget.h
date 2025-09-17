@@ -30,7 +30,7 @@ namespace Nastro
 
         private slots:
 
-            void Slot_VM_OnActivatedHDUChanged(const std::optional<ActivatedHDU>& activatedHDU);
+            void Slot_VM_OnActivatedHDUChanged(const std::optional<FileHDU>& activatedHDU);
 
         private:
 

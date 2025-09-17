@@ -65,7 +65,7 @@ void HeadersWidget::InitialState()
     }
 }
 
-void HeadersWidget::Slot_VM_OnActivatedHDUChanged(const std::optional<ActivatedHDU>& activatedHDU)
+void HeadersWidget::Slot_VM_OnActivatedHDUChanged(const std::optional<FileHDU>& activatedHDU)
 {
     if (!activatedHDU)
     {

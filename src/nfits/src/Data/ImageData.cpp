@@ -14,9 +14,20 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+#include <cassert>
 
 namespace NFITS
 {
+
+struct HDUImageMetadata
+{
+    int64_t bitpix{0};
+    std::vector<int64_t> naxisns;
+    double bZero{0.0};
+    double bScale{1.0};
+    std::optional<double> dataMin;
+    std::optional<double> dataMax;
+};
 
 template <typename T>
 inline constexpr void SwapEndiannessPacked(T& value) noexcept
@@ -39,7 +50,7 @@ double GetPhysicalValue(DataType dataValue, double bzero, double bscale)
 }
 
 template <typename DataType>
-void RawDataToPhysicalValuesTyped(std::vector<double>& out, const ImageMetadata& metadata, std::span<const std::byte> data)
+void RawDataToPhysicalValuesTyped(std::vector<double>& out, const HDUImageMetadata& metadata, std::span<const std::byte> data)
 {
     const auto typedData = std::span<const DataType>(
         reinterpret_cast<const DataType*>(data.data()),
@@ -52,7 +63,7 @@ void RawDataToPhysicalValuesTyped(std::vector<double>& out, const ImageMetadata&
     }
 }
 
-bool RawDataToPhysicalValues(std::vector<double>& out, const ImageMetadata& metadata, std::span<const std::byte> data)
+bool RawDataToPhysicalValues(std::vector<double>& out, const HDUImageMetadata& metadata, std::span<const std::byte> data)
 {
     switch (metadata.bitpix)
     {
@@ -67,7 +78,7 @@ bool RawDataToPhysicalValues(std::vector<double>& out, const ImageMetadata& meta
     return true;
 }
 
-std::expected<ImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
+std::expected<HDUImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
 {
     const auto bitpix = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BITPIX);
     if (!bitpix) { return std::unexpected(false); }
@@ -88,7 +99,7 @@ std::expected<ImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
     const auto dataMin = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMIN);
     const auto dataMax = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMAX);
 
-    auto metadata = ImageMetadata{};
+    auto metadata = HDUImageMetadata{};
     metadata.bitpix = *bitpix;
     metadata.naxisns = naxisns;
     if (bZero) { metadata.bZero = *bZero; }
@@ -99,7 +110,7 @@ std::expected<ImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
     return metadata;
 }
 
-std::expected<std::vector<double>, bool> ReadDataAsPhysicalValues(const FITSFile* pFile, const HDU* pHDU, const ImageMetadata& metadata)
+std::expected<std::vector<double>, bool> ReadDataAsPhysicalValues(const FITSFile* pFile, const HDU* pHDU, const HDUImageMetadata& metadata)
 {
     auto blockSource = FITSBlockSource(pFile->GetByteSource());
 
@@ -140,117 +151,53 @@ std::expected<std::vector<double>, bool> ReadDataAsPhysicalValues(const FITSFile
     return physicalValues;
 }
 
-static constexpr std::size_t HISTOGRAM_NUM_BINS = 100;
-
-void CalculateMinMax(PhysicalStats& physicalStats, std::span<const double> values)
+static inline uintmax_t GetSliceDataSize(const ImageSliceSpan& sliceSpan)
 {
-    physicalStats.minMax = { std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest() };
-
-    for (const auto& value : values)
-    {
-        // Skip over nan/infinity values
-        if (!std::isfinite(value)) { continue; }
-
-        physicalStats.minMax.first = std::min(physicalStats.minMax.first, value);
-        physicalStats.minMax.second = std::max(physicalStats.minMax.second, value);
-    }
+    return sliceSpan.at(0) * sliceSpan.at(1);
 }
 
-void CalculateHistogram(PhysicalStats& physicalStats, std::span<const double> values)
+static inline std::span<const double> GetSliceDataSpan(const ImageSliceSpan& sliceSpan, const uintmax_t& sliceIndex, std::span<const double> data)
 {
-    const auto rangeMin = physicalStats.minMax.first;
-    const auto rangeMax = physicalStats.minMax.second;
-    const auto rangeSpan = rangeMax - rangeMin;
-
-    physicalStats.histogram = std::vector<std::size_t>(HISTOGRAM_NUM_BINS, 0);
-
-    for (const auto& value : values)
-    {
-        // Skip over nan/infinity values
-        if (!std::isfinite(value)) { continue; }
-
-        const auto binIndex = static_cast<std::size_t>(((value - rangeMin) / rangeSpan) * (double)(HISTOGRAM_NUM_BINS - 1));
-
-        physicalStats.histogram[binIndex]++;
-    }
-}
-
-void CalculateHistogramCumulative(PhysicalStats& physicalStats)
-{
-    physicalStats.histogramCumulative = std::vector<std::size_t>(HISTOGRAM_NUM_BINS, 0);
-    physicalStats.histogramCumulative.at(0) = physicalStats.histogram.at(0);
-
-    for (std::size_t binIndex = 1; binIndex < HISTOGRAM_NUM_BINS; ++binIndex)
-    {
-        physicalStats.histogramCumulative.at(binIndex) = physicalStats.histogramCumulative.at(binIndex - 1) + physicalStats.histogram.at(binIndex);
-    }
-}
-
-PhysicalStats CompilePhysicalStats(std::span<const double> values)
-{
-    PhysicalStats physicalStats{};
-
-    CalculateMinMax(physicalStats, values);
-    CalculateHistogram(physicalStats, values);
-    CalculateHistogramCumulative(physicalStats);
-
-    return physicalStats;
-}
-
-static inline uintmax_t GetNumSlices(const ImageMetadata& metadata)
-{
-    return metadata.naxisns.size() == 2 ? 1 :
-    static_cast<uintmax_t>(std::accumulate(metadata.naxisns.cbegin() + 2, metadata.naxisns.cend(), 1, std::multiplies<>()));
-}
-
-static inline uintmax_t GetSliceDataSize(const ImageMetadata& metadata)
-{
-    return static_cast<uintmax_t>(metadata.naxisns.at(0) * metadata.naxisns.at(1));
-}
-
-static inline std::span<const double> GetSliceDataSpan(const ImageMetadata& metadata,  const uintmax_t& sliceIndex, std::span<const double> data)
-{
-    const auto sliceDataSize = GetSliceDataSize(metadata);
+    const auto sliceDataSize = GetSliceDataSize(sliceSpan);
 
     return data.subspan(sliceIndex * sliceDataSize, sliceDataSize);
 }
 
-static inline uintmax_t GetNumSliceCubes(const ImageMetadata& metadata)
+static inline uint64_t GetNumSliceCubes(const ImageSliceSpan& sliceSpan)
 {
-    return metadata.naxisns.size() <= 3 ? 1 :
-       static_cast<uintmax_t>(std::accumulate(metadata.naxisns.cbegin() + 3, metadata.naxisns.cend(), 1, std::multiplies<>()));
+    return sliceSpan.size() <= 3 ? 1U :
+       std::accumulate(sliceSpan.cbegin() + 3U, sliceSpan.cend(), 1U, std::multiplies<>());
 }
 
-static inline uintmax_t GetSliceCubeDataSize(const ImageMetadata& metadata)
+static inline uintmax_t GetSliceCubeDataSize(const ImageSliceSpan& sliceSpan)
 {
-    const auto sliceDataSize = GetSliceDataSize(metadata);;
+    const auto sliceDataSize = GetSliceDataSize(sliceSpan);
 
-    if (metadata.naxisns.size() == 2)
+    if (sliceSpan.size() == 2)
     {
         return sliceDataSize;
     }
 
-    const auto slicesPerCube = static_cast<uintmax_t>(metadata.naxisns.at(2));
+    const auto slicesPerCube = sliceSpan.at(2);
 
     return slicesPerCube * sliceDataSize;
 }
 
-static inline std::span<const double> GetSliceCubeDataSpan(const ImageMetadata& metadata,  const uintmax_t& sliceCubeIndex, std::span<const double> data)
+static inline std::span<const double> GetSliceCubeDataSpan(const ImageSliceSpan& sliceSpan,  const uintmax_t& sliceCubeIndex, std::span<const double> data)
 {
-    const auto sliceCubeDataSize = GetSliceCubeDataSize(metadata);
+    const auto sliceCubeDataSize = GetSliceCubeDataSize(sliceSpan);
 
     return data.subspan(sliceCubeIndex * sliceCubeDataSize, sliceCubeDataSize);
 }
 
-bool ImageData::LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU)
+std::expected<std::unique_ptr<ImageData>, Error> ImageData::LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU)
 {
     //
     // Sanity test that the HDU actually contains image data
     //
     if (pHDU->type != HDU::Type::Image)
     {
-        std::cerr << "ImageData::LoadFromFileBlocking: HDU doesn't hold image data" << std::endl;
-        return false;
+        return std::unexpected(Error::Msg(ErrorType::General, "HDU doesn't hold image data"));
     }
 
     //
@@ -259,8 +206,7 @@ bool ImageData::LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU)
     auto metadata = ParseImageMetadata(pHDU);
     if (!metadata)
     {
-        std::cerr << "ImageData::LoadFromFileBlocking: Failed to parse image metadata" << std::endl;
-        return false;
+        return std::unexpected(Error::Msg(ErrorType::Parse, "Failed to parse image metadata"));
     }
 
     //
@@ -269,8 +215,19 @@ bool ImageData::LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU)
     auto physicalValues = ReadDataAsPhysicalValues(pFile, pHDU, *metadata);
     if (!physicalValues)
     {
-        std::cerr << "ImageData::LoadFromFileBlocking: Failed to parse image data" << std::endl;
-        return false;
+        return std::unexpected(Error::Msg(ErrorType::Parse, "Failed to parse image data as physical values"));
+    }
+
+    ImageSliceSpan sliceSpan{};
+
+    for (const auto& naxisn : metadata->naxisns)
+    {
+        if (naxisn < 0)
+        {
+            return std::unexpected(Error::Msg(ErrorType::Validation, "Out of bounds naxisn value: {}", naxisn));
+        }
+
+        sliceSpan.push_back(static_cast<uint64_t>(naxisn));
     }
 
     //
@@ -278,115 +235,91 @@ bool ImageData::LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU)
     //
     std::vector<PhysicalStats> slicePhysicalStats;
 
-    for (uintmax_t sliceIndex = 0; sliceIndex < GetNumSlices(*metadata); ++sliceIndex)
+    for (uint64_t sliceIndex = 0; sliceIndex < GetNumSlicesInSpan(sliceSpan); ++sliceIndex)
     {
-        const auto sliceData = GetSliceDataSpan(*metadata, sliceIndex, *physicalValues);
-        slicePhysicalStats.push_back(CompilePhysicalStats(sliceData));
+        const auto sliceData = GetSliceDataSpan(sliceSpan, sliceIndex, *physicalValues);
+        slicePhysicalStats.push_back(CompilePhysicalStats({sliceData}));
     }
 
     std::vector<PhysicalStats> sliceCubePhysicalStats;
 
-    for (uintmax_t sliceCubeIndex = 0; sliceCubeIndex < GetNumSliceCubes(*metadata); ++sliceCubeIndex)
+    for (uint64_t sliceCubeIndex = 0; sliceCubeIndex < GetNumSliceCubes(sliceSpan); ++sliceCubeIndex)
     {
-        const auto sliceCubeData = GetSliceCubeDataSpan(*metadata, sliceCubeIndex, *physicalValues);
-        sliceCubePhysicalStats.push_back(CompilePhysicalStats(sliceCubeData));
+        const auto sliceCubeData = GetSliceCubeDataSpan(sliceSpan, sliceCubeIndex, *physicalValues);
+        sliceCubePhysicalStats.push_back(CompilePhysicalStats({sliceCubeData}));
     }
 
     //
-    // Successful load, set internal data
+    // Successful load
     //
-    m_metadata = std::move(*metadata);
-    m_physicalValues = std::move(*physicalValues);
-    m_slicePhysicalStats = slicePhysicalStats;
-    m_sliceCubePhysicalStats = sliceCubePhysicalStats;
+    auto pImageData = std::make_unique<ImageData>();
+    pImageData->m_sliceSpan = sliceSpan;
+    pImageData->m_physicalValues = std::move(*physicalValues);
+    pImageData->m_slicePhysicalStats = slicePhysicalStats;
+    pImageData->m_sliceCubePhysicalStats = sliceCubePhysicalStats;
 
-    return true;
+    return pImageData;
 }
 
-std::optional<uintmax_t> ImageData::GetSliceIndex(const ImageSlice& slice) const
+std::optional<uintmax_t> ImageData::GetSliceIndex(const ImageSliceKey& sliceKey) const
 {
-    uintmax_t sliceIndex = 0;
-
-    if (m_metadata.naxisns.size() > 2)
+    const auto sliceIndex = SliceKeyToLinearIndex(m_sliceSpan, sliceKey);
+    if (!sliceIndex)
     {
-        for (unsigned int n = 2; n < m_metadata.naxisns.size(); ++n)
-        {
-            int64_t axisValue = 0;
-
-            const auto nValue = slice.axisValue.find(n + 1);
-            if (nValue != slice.axisValue.cend())
-            {
-                axisValue = nValue->second;
-            }
-
-            uintmax_t prevAxesDataSpan = 1;
-            for (unsigned int p = 2; p < n; ++p)
-            {
-                prevAxesDataSpan *= static_cast<uintmax_t>(m_metadata.naxisns.at(p));
-            }
-
-            sliceIndex += prevAxesDataSpan * static_cast<uintmax_t>(axisValue);
-        }
-    }
-
-    if (sliceIndex >= m_slicePhysicalStats.size())
-    {
+        std::cerr << "GetSliceIndex: Error: " << sliceIndex.error().msg << std::endl;
         return std::nullopt;
     }
 
-    return sliceIndex;
+    if (*sliceIndex >= m_slicePhysicalStats.size())
+    {
+        std::cerr << "GetSliceIndex: Out of bounds slice key" << std::endl;
+        return std::nullopt;
+    }
+
+    return *sliceIndex;
 }
 
-std::optional<uintmax_t> ImageData::GetSliceCubeIndex(const ImageSlice& slice) const
+std::optional<uintmax_t> ImageData::GetSliceCubeIndex(const ImageSliceKey& sliceKey) const
 {
     // If <= 3 axes, there's only ever one slice cube
-    if (m_metadata.naxisns.size() <= 3)
+    if (m_sliceSpan.size() <= 3)
     {
         return 0;
     }
 
-    const auto sliceIndex = GetSliceIndex(slice);
+    const auto sliceIndex = GetSliceIndex(sliceKey);
     if (!sliceIndex)
     {
         return std::nullopt;
     }
 
-    const auto slicesPerCube = static_cast<uintmax_t>(m_metadata.naxisns.at(2));
+    const auto slicesPerCube = m_sliceSpan.at(2);
 
     return *sliceIndex / slicesPerCube;
 }
 
-std::optional<std::span<const double>> ImageData::GetSlicePhysicalValues(const ImageSlice& slice) const
+std::optional<ImageSlice> ImageData::GetImageSlice(const ImageSliceKey& sliceKey) const
 {
-    const auto sliceIndex = GetSliceIndex(slice);
-    if (!sliceIndex)
+    if (m_sliceSpan.size() < 2)
     {
         return std::nullopt;
     }
 
-    return GetSliceDataSpan(m_metadata, *sliceIndex, m_physicalValues);
-}
+    const auto sliceIndex = GetSliceIndex(sliceKey);
+    const auto sliceCubeIndex = GetSliceCubeIndex(sliceKey);
 
-std::optional<PhysicalStats> ImageData::GetSlicePhysicalStats(const ImageSlice& slice) const
-{
-    const auto sliceIndex = GetSliceIndex(slice);
-    if (!sliceIndex)
+    if (!sliceIndex || !sliceCubeIndex)
     {
         return std::nullopt;
     }
 
-    return m_slicePhysicalStats.at(*sliceIndex);
-}
-
-std::optional<PhysicalStats> ImageData::GetSliceCubePhysicalStats(const ImageSlice& slice) const
-{
-    const auto sliceCubeIndex = GetSliceCubeIndex(slice);
-    if (!sliceCubeIndex)
-    {
-        return std::nullopt;
-    }
-
-    return m_sliceCubePhysicalStats.at(*sliceCubeIndex);
+    return ImageSlice{
+        .width = m_sliceSpan.at(0),
+        .height = m_sliceSpan.at(1),
+        .physicalStats = m_slicePhysicalStats.at(*sliceIndex),
+        .cubePhysicalStats = m_sliceCubePhysicalStats.at(*sliceCubeIndex),
+        .physicalValues = GetSliceDataSpan(m_sliceSpan, *sliceIndex, m_physicalValues)
+    };
 }
 
 }
