@@ -7,13 +7,16 @@
 
 nastro is a cross-platform FITS 4.0 file viewer.
 
-Import FITS files and render N-dimensional image data in an MDI work area.
-
-Image processing supports:
-- Common transfer functions (linear, log, square, sqrt, asinh)
-- Perceptually uniform color mappings
-- Per-slice and per-series ranging modes
-- Histogram-based value ranging
+- Import FITS files and render N-dimensional image data in an MDI work area.
+- Image processing functionality:
+  - Common transfer functions (linear, log, square, sqrt, asinh)
+  - Perceptually uniform color mappings
+  - Per-slice and per-series ranging modes
+  - Histogram-based value ranging
+- Read images from:
+  - Primary image HDUs / Image extension HDUs
+  - RICE compressed tiled binary table images
+- Compare multiple images from different HDUs or files side-by-side in a slideshow
 
 *The project is currently under heavy development and far from complete.*
 
