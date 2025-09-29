@@ -17,7 +17,8 @@ namespace NFITS
 
             enum class Type
             {
-                Image
+                Image,
+                BinTable
             };
 
         public:

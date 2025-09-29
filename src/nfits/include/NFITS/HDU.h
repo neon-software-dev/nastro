@@ -82,14 +82,16 @@ namespace NFITS
         Header header{};
 
         /**
-         * The total byte size of all the HDU's data blocks
-         */
-        uintmax_t dataByteSize{0};
-
-        /**
          * The total number of data blocks the HDU contains
          */
         uintmax_t numDataBlocks{0};
+
+        /**
+        * The total byte size of the data associated with the HDU. Note that this
+        * is not the byte size of the data blocks containing the data, it's the
+        * size of the actual data.
+        */
+        uintmax_t dataByteSize{0};
     };
 }
 

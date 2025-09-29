@@ -58,14 +58,14 @@ std::expected<std::optional<std::string>, Error> ParseKeywordName(KeywordNameCSp
             // Can't be any characters after spaces have started (keyword must be left-aligned with no embedded spaces)
             if (spaceFound)
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordName: Found embedded/leading spaces in keyword name"));
+                return std::unexpected(Error::Msg("ParseKeywordName: Found embedded/leading spaces in keyword name"));
             }
 
             // Must be a valid character
             const bool isValidChar = IsDigit(c) || IsUpperCaseAlphabetic(c) || (c == '_') || (c == '-');
             if (!isValidChar)
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordName: Invalid character in keyword name"));
+                return std::unexpected(Error::Msg("ParseKeywordName: Invalid character in keyword name"));
             }
 
             nameLength++;
@@ -188,13 +188,13 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
         // Error if any non-space characters follow the value
         if (reachedStop && !isSpaceChar)
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: Non-space char detected following the value"));
+            return std::unexpected(Error::Msg("ParseValue_AsInteger: Non-space char detected following the value"));
         }
 
         // The sign character, if present, must come before any digits
         if (isSignChar && atLeastOneDigit)
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: Sign must come before any digits"));
+            return std::unexpected(Error::Msg("ParseValue_AsInteger: Sign must come before any digits"));
         }
 
         if (isValidChar)
@@ -207,7 +207,7 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
         }
         else
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: Encountered unexpected character"));
+            return std::unexpected(Error::Msg("ParseValue_AsInteger: Encountered unexpected character"));
         }
 
         if (isDigitChar)
@@ -219,7 +219,7 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
     // An integer value requires at least one digit
     if (!atLeastOneDigit)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: Require at least one valid digit"));
+        return std::unexpected(Error::Msg("ParseValue_AsInteger: Require at least one valid digit"));
     }
 
     try
@@ -228,11 +228,11 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
     }
     catch (const std::invalid_argument&)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: No conversion to integer could be performed: {}", valStr));
+        return std::unexpected(Error::Msg("ParseValue_AsInteger: No conversion to integer could be performed: {}", valStr));
     }
     catch (const std::out_of_range&)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsInteger: Value out of range: {}", valStr));
+        return std::unexpected(Error::Msg("ParseValue_AsInteger: Value out of range: {}", valStr));
     }
 }
 
@@ -250,7 +250,7 @@ std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan key
         // Require right-justified
         if (valueSpan[valueSpan.size() - 1] == ' ')
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsInteger: Fixed format is not right-justified"));
+            return std::unexpected(Error::Msg("ParseKeywordValue_AsInteger: Fixed format is not right-justified"));
         }
 
         return ParseValue_AsInteger(valueSpan);
@@ -321,7 +321,7 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
         // Error if any non-space characters follow the value
         if (reachedStop && !isSpaceChar)
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Non-space char detected following the value"));
+            return std::unexpected(Error::Msg("ParseValue_AsReal: Non-space char detected following the value"));
         }
 
         // The sign character, if present, must come before any digits
@@ -329,18 +329,18 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
         {
             if (!reachedExponent && atLeastOneDigit)
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Sign must come before any digits"));
+                return std::unexpected(Error::Msg("ParseValue_AsReal: Sign must come before any digits"));
             }
             else if (reachedExponent && atLeastOneDigitPostExponent)
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Sign must come before any digits in exponent"));
+                return std::unexpected(Error::Msg("ParseValue_AsReal: Sign must come before any digits in exponent"));
             }
         }
 
         // The decimal character, if present, must come after at least one digit
         if (isDecimalChar && !atLeastOneDigit)
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Decimal must come after one or more digits"));
+            return std::unexpected(Error::Msg("ParseValue_AsReal: Decimal must come after one or more digits"));
         }
 
         if (isExponentChar)
@@ -348,7 +348,7 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
             // The exponent character, if present, must come after at least one digit
             if (!atLeastOneDigit)
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Exponent must come after one or more digits"));
+                return std::unexpected(Error::Msg("ParseValue_AsReal: Exponent must come after one or more digits"));
             }
 
             reachedExponent = true;
@@ -364,7 +364,7 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
         }
         else
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Encountered unexpected character"));
+            return std::unexpected(Error::Msg("ParseValue_AsReal: Encountered unexpected character"));
         }
 
         if (isDigitChar)
@@ -381,13 +381,13 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
     // A real value requires at least one digit
     if (!atLeastOneDigit)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Require at least one valid digit"));
+        return std::unexpected(Error::Msg("ParseValue_AsReal: Require at least one valid digit"));
     }
 
     // If exponent is present, requires at least one digit
     if (reachedExponent && !atLeastOneDigitPostExponent)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Require at least one valid digit following an exponent"));
+        return std::unexpected(Error::Msg("ParseValue_AsReal: Require at least one valid digit following an exponent"));
     }
 
     try
@@ -396,11 +396,11 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
     }
     catch (const std::invalid_argument&)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: No conversion to double could be performed: {}", valStr));
+        return std::unexpected(Error::Msg("ParseValue_AsReal: No conversion to double could be performed: {}", valStr));
     }
     catch (const std::out_of_range&)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseValue_AsReal: Value out of range: {}", valStr));
+        return std::unexpected(Error::Msg("ParseValue_AsReal: Value out of range: {}", valStr));
     }
 }
 
@@ -419,7 +419,7 @@ std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keyword
         // Require right-justified; no space at the end
         if (IsSpaceChar(valueSpan.last(1)[0]))
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsReal: Fixed format is not right-justified"));
+            return std::unexpected(Error::Msg("ParseKeywordValue_AsReal: Fixed format is not right-justified"));
         }
 
         return ParseValue_AsReal(valueSpan);
@@ -477,7 +477,7 @@ std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywor
 
     if (!logicalChar)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsLogical: No logical value character detected"));
+        return std::unexpected(Error::Msg("ParseKeywordValue_AsLogical: No logical value character detected"));
     }
     else if (*logicalChar == 'T')
     {
@@ -489,7 +489,7 @@ std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywor
     }
     else
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsLogical: Invalid logical character: {}", *logicalChar));
+        return std::unexpected(Error::Msg("ParseKeywordValue_AsLogical: Invalid logical character: {}", *logicalChar));
     }
 }
 
@@ -514,7 +514,7 @@ std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan 
          */
         if (keywordRecordSpan[10] != '\'')
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Fixed format string doesn't have starting quote in pos 10"));
+            return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Fixed format string doesn't have starting quote in pos 10"));
         }
 
         startQuotePos = 10;
@@ -543,13 +543,13 @@ std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan 
             }
             else if (!IsSpaceChar(c))
             {
-                return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Non-space character found before start quote"));
+                return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Non-space character found before start quote"));
             }
         }
 
         if (!foundStartQuotePos)
         {
-            return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Free format string, no start quote found"));
+            return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Free format string, no start quote found"));
         }
     }
 
@@ -596,7 +596,7 @@ std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan 
 
     if (!foundEndQuotePos)
     {
-        return std::unexpected(Error::Msg(ErrorType::Parse, "ParseKeywordValue_AsString: Failed to find closing quote"));
+        return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Failed to find closing quote"));
     }
 
     //
@@ -633,6 +633,177 @@ std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan 
     }
 
     return stringVal;
+}
+
+std::expected<BinFieldType, Error> GetBinFieldTypeFromChar(char typeChar)
+{
+    switch (typeChar)
+    {
+        case 'L': return BinFieldType::Logical;
+        case 'X': return BinFieldType::Bit;
+        case 'B': return BinFieldType::UnsignedByte;
+        case 'I': return BinFieldType::Integer16Bit;
+        case 'J': return BinFieldType::Integer32Bit;
+        case 'K': return BinFieldType::Integer64Bit;
+        case 'A': return BinFieldType::Character;
+        case 'E': return BinFieldType::FloatSinglePrecision;
+        case 'D': return BinFieldType::FloatDoublePrecision;
+        case 'C': return BinFieldType::ComplexSinglePrecision;
+        case 'M': return BinFieldType::ComplexDoublePrecision;
+        case 'P': return BinFieldType::Array32Bit;
+        case 'Q': return BinFieldType::Array64Bit;
+        default: return std::unexpected(Error::Msg("Invalid type character: {}", typeChar));
+    }
+}
+
+std::expected<BinFieldForm, Error> ParseBinTable_TFORMN(const std::string& tformn)
+{
+    BinFieldForm fieldForm{};
+
+    if (tformn.empty())
+    {
+        return std::unexpected(Error::Msg("tformn can not be empty"));
+    }
+
+    // Find the first non-numeric digit, to find the delimitation between repeat count and type
+    const auto nonDigitIt = std::ranges::find_if(tformn, [](const char& c){
+        return !IsDigit(c);
+    });
+    if (nonDigitIt == tformn.cend())
+    {
+        return std::unexpected(Error::Msg("tformn doesn't contain type specifier"));
+    }
+
+    //
+    // Parse repeat count, if present
+    //
+    if (nonDigitIt != tformn.cbegin())
+    {
+        const auto repeatCountSubstring = std::string(tformn.cbegin(), nonDigitIt);
+        int repeatCount = 1;
+        try
+        {
+            repeatCount = std::stoi(repeatCountSubstring);
+        }
+        catch (const std::invalid_argument&)
+        {
+            return std::unexpected(Error::Msg("No conversion to integer could be performed: {}", repeatCountSubstring));
+        }
+        catch (const std::out_of_range&)
+        {
+            return std::unexpected(Error::Msg("Value out of range: {}", repeatCountSubstring));
+        }
+
+        if (repeatCount < 0)
+        {
+            return std::unexpected(Error::Msg("Repeat count must be non-negative: {}", repeatCount));
+        }
+
+        fieldForm.repeatCount = static_cast<uintmax_t>(repeatCount);
+    }
+
+    //
+    // Parse field type
+    //
+    const auto typeCharIndex = static_cast<std::size_t>(std::distance(tformn.cbegin(), nonDigitIt));
+    const auto typeChar = tformn.at(typeCharIndex);
+    const auto fieldType = GetBinFieldTypeFromChar(typeChar);
+    if (!fieldType)
+    {
+        return std::unexpected(fieldType.error());
+    }
+    fieldForm.type = *fieldType;
+
+    //
+    // Parse (optional) array field type
+    //
+    std::size_t arrayTypeCharIndex = 0;
+    if (fieldForm.type == BinFieldType::Array32Bit || fieldForm.type == BinFieldType::Array64Bit)
+    {
+        arrayTypeCharIndex = typeCharIndex + 1;
+
+        // Require the tformn to have more characters when an array is involved
+        if (tformn.length() <= arrayTypeCharIndex)
+        {
+            return std::unexpected(Error::Msg("Array field type character must be present"));
+        }
+
+        const auto arrayTypeChar = tformn.at(arrayTypeCharIndex);
+        const auto arrayFieldType = GetBinFieldTypeFromChar(arrayTypeChar);
+        if (!arrayFieldType)
+        {
+            return std::unexpected(arrayFieldType.error());
+        }
+
+        // The array field type can't be an array field type
+        if (*arrayFieldType == BinFieldType::Array32Bit || *arrayFieldType == BinFieldType::Array64Bit)
+        {
+            return std::unexpected(Error::Msg("Invalid array field type character: {}", arrayTypeChar));
+        }
+
+        fieldForm.arrayType = *arrayFieldType;
+    }
+
+    //
+    // Parse (optional) array max count
+    //
+    if (fieldForm.arrayType)
+    {
+        const auto arrayMaxCountStartIt = std::ranges::find_if(tformn, [](const char c){
+            return c == '(';
+        });
+        if (arrayMaxCountStartIt == tformn.cend())
+        {
+            return std::unexpected(Error::Msg("Array field missing max element count start char"));
+        }
+
+        const auto arrayMaxCountCloseIt = std::ranges::find_if(tformn, [](const char c){
+            return c == ')';
+        });
+        if (arrayMaxCountCloseIt == tformn.cend())
+        {
+            return std::unexpected(Error::Msg("Array field missing max element count close char"));
+        }
+
+        const auto arrayMaxCountStartIndex = static_cast<std::size_t>(std::distance(tformn.cbegin(), arrayMaxCountStartIt));
+        const auto arrayMaxCountCloseIndex = static_cast<std::size_t>(std::distance(tformn.cbegin(), arrayMaxCountCloseIt));
+
+        // Max count opening '(' should immediately follow array type character
+        if (arrayMaxCountStartIndex != arrayTypeCharIndex + 1)
+        {
+            return std::unexpected(Error::Msg("Invalid array max count specifier"));
+        }
+
+        // Should be characters inbetween ( and )
+        if (arrayMaxCountStartIndex + 1 == arrayMaxCountCloseIndex)
+        {
+            return std::unexpected(Error::Msg("Invalid array max count specifier"));
+        }
+
+        const auto arrayMaxCountString = tformn.substr(arrayMaxCountStartIndex + 1, arrayMaxCountCloseIndex - arrayMaxCountStartIndex - 1);
+        int arrayMaxCount = 0;
+        try
+        {
+            arrayMaxCount = std::stoi(arrayMaxCountString);
+        }
+        catch (const std::invalid_argument&)
+        {
+            return std::unexpected(Error::Msg("No conversion to integer could be performed: {}", arrayMaxCountString));
+        }
+        catch (const std::out_of_range&)
+        {
+            return std::unexpected(Error::Msg("Value out of range: {}", arrayMaxCountString));
+        }
+
+        if (arrayMaxCount < 0)
+        {
+            return std::unexpected(Error::Msg("Array max count count must be non-negative: {}", arrayMaxCount));
+        }
+
+        fieldForm.arrayMaxCount = static_cast<uintmax_t>(arrayMaxCount);
+    }
+
+    return fieldForm;
 }
 
 }

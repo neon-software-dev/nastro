@@ -26,12 +26,12 @@ Result MemoryFITSByteSource::ReadBytes(std::span<std::byte> dst, const ByteOffse
 {
     if (dst.size() < byteSize.value)
     {
-        return Result::Fail(ErrorType::General, "MemoryFITSByteSource::ReadBytes: dst size is too small for requested read");
+        return Result::Fail("MemoryFITSByteSource::ReadBytes: dst size is too small for requested read");
     }
 
     if ((byteOffset.value + byteSize.value) > GetByteSize()->value)
     {
-        return Result::Fail(ErrorType::General, "MemoryFITSByteSource::ReadBytes: Byte offset/size is out of bounds");
+        return Result::Fail("MemoryFITSByteSource::ReadBytes: Byte offset/size is out of bounds");
     }
 
     memcpy(dst.data(), m_data.data() + byteOffset.value, byteSize.value);
@@ -43,12 +43,12 @@ Result MemoryFITSByteSource::WriteBytes(std::span<const std::byte> src, const By
 {
     if (src.size() < byteSize.value)
     {
-        return Result::Fail(ErrorType::General, "MemoryFITSByteSource::WriteBytes: src size is too small for requested write");
+        return Result::Fail("MemoryFITSByteSource::WriteBytes: src size is too small for requested write");
     }
 
     if ((byteOffset.value + byteSize.value) > GetByteSize()->value)
     {
-        return Result::Fail(ErrorType::General, "MemoryFITSByteSource::WriteBytes: Byte offset/size is out of bounds");
+        return Result::Fail("MemoryFITSByteSource::WriteBytes: Byte offset/size is out of bounds");
     }
 
     memcpy(m_data.data() + byteOffset.value, src.data(), byteSize.value);

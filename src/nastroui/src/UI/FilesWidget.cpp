@@ -197,13 +197,6 @@ void FilesWidget::Slot_OnTreeView_Activated(const QModelIndex& index)
 
     const auto pHDUTreeItem = dynamic_cast<const HDUFilesTreeItem*>(pTreeItem);
 
-    // Silently ignore empty HDU activations
-    const bool emptyData = pHDUTreeItem->GetHDU().GetDataByteSize() == 0U;
-    if (emptyData)
-    {
-        return;
-    }
-
     const auto pParentTreeItem =  static_cast<const FilesTreeItem*>(sourceIndex.parent().internalPointer());
     const auto pFITSTreeItem = dynamic_cast<const FITSFilesTreeItem*>(pParentTreeItem);
 

@@ -7,8 +7,10 @@
 #include "FilesModel.h"
 
 #include <NFITS/KeywordCommon.h>
+#include <NFITS/Data/BinTableImageData.h>
 
 #include <cassert>
+#include <ranges>
 
 namespace Nastro
 {
@@ -133,25 +135,45 @@ HDUFilesTreeItem::HDUFilesTreeItem(NFITS::HDU hdu, std::size_t hduIndex, const F
 
 }
 
-std::string GetHDUTypeString(NFITS::HDU::Type type, bool hasData)
+std::string GetHDUTypeString(const NFITS::HDU& hdu, bool hasData)
 {
     if (!hasData)
     {
         return "Empty";
     }
 
-    switch (type)
+    switch (hdu.type)
     {
         case NFITS::HDU::Type::Image: return "Image";
         case NFITS::HDU::Type::Table: return "Table";
-        case NFITS::HDU::Type::BinTable: return "BinTable";
+        case NFITS::HDU::Type::BinTable:
+        {
+            if (NFITS::HDUContainsBinTableImage(hdu)) { return "BinTable Image"; } else { return "BinTable"; }
+        }
     }
 
     assert(false);
     return "Error";
 }
 
-std::string GetImageDetailString(const NFITS::HDU& hdu)
+// {800, 600, 3} -> "800x600x3"
+std::string JoinNaxisnsToDimenString(const std::vector<int64_t>& naxisns) {
+    std::string str;
+
+    for (std::size_t x = 0; x < naxisns.size(); ++x)
+    {
+        str += std::format("{}", naxisns.at(x));
+
+        if (x != (naxisns.size() - 1))
+        {
+            str += "x";
+        }
+    }
+
+    return str;
+}
+
+std::string GetDetailString_Image(const NFITS::HDU& hdu)
 {
     const auto naxis = hdu.header.GetFirstKeywordRecord_AsInteger(NFITS::KEYWORD_NAME_NAXIS);
     if (!naxis) { return {}; }
@@ -166,19 +188,35 @@ std::string GetImageDetailString(const NFITS::HDU& hdu)
         naxisns.push_back(*naxisn);
     }
 
-    std::string detailString;
+    return std::format("({})", JoinNaxisnsToDimenString(naxisns));
+}
 
-    for (std::size_t x = 0; x < naxisns.size(); ++x)
+std::string GetDetailString_BinTableImage(const NFITS::HDU& hdu)
+{
+    const auto znaxis = hdu.header.GetFirstKeywordRecord_AsInteger(NFITS::KEYWORD_NAME_ZNAXIS);
+    if (!znaxis) { return {}; }
+
+    std::vector<int64_t> znaxisns;
+
+    for (int64_t n = 1; n <= *znaxis; ++n)
     {
-        detailString += std::format("{}", naxisns.at(x));
+        const auto znaxisn = hdu.header.GetFirstKeywordRecord_AsInteger(std::format("{}{}", NFITS::KEYWORD_NAME_ZNAXIS, n));
+        if (!znaxis) { return {}; }
 
-        if (x != (naxisns.size() - 1))
-        {
-            detailString += "x";
-        }
+        znaxisns.push_back(*znaxisn);
     }
 
-    return std::format("({})", detailString);
+    return std::format("({})", JoinNaxisnsToDimenString(znaxisns));
+}
+
+std::string GetDetailString_BinTable(const NFITS::HDU& hdu)
+{
+    if (NFITS::HDUContainsBinTableImage(hdu))
+    {
+        return GetDetailString_BinTableImage(hdu);
+    }
+
+    return {};
 }
 
 QVariant HDUFilesTreeItem::GetDisplayData(int column) const
@@ -186,7 +224,7 @@ QVariant HDUFilesTreeItem::GetDisplayData(int column) const
     if (column == COL_FILENAME)
     {
         const bool hduHasData = m_hdu.GetDataByteSize() > 0U;
-        const auto typeString = GetHDUTypeString(m_hdu.type, hduHasData);
+        const auto typeString = GetHDUTypeString(m_hdu, hduHasData);
 
         std::string detailString;
 
@@ -194,7 +232,8 @@ QVariant HDUFilesTreeItem::GetDisplayData(int column) const
         {
             switch (m_hdu.type)
             {
-                case NFITS::HDU::Type::Image: detailString = GetImageDetailString(m_hdu); break;
+                case NFITS::HDU::Type::Image: detailString = GetDetailString_Image(m_hdu); break;
+                case NFITS::HDU::Type::BinTable: detailString = GetDetailString_BinTable(m_hdu); break;
                 default: /* no-op */ break;
             }
         }

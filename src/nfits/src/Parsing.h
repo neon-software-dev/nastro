@@ -11,6 +11,7 @@
 #include <NFITS/Error.h>
 #include <NFITS/KeywordRecord.h>
 #include <NFITS/SharedLib.h>
+#include <NFITS/Data/BinTableData.h>
 
 #include <expected>
 #include <optional>
@@ -59,6 +60,11 @@ namespace NFITS
     * Parses a keyword value as a string
     */
     [[nodiscard]] NFITS_PUBLIC std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+
+    /**
+     * Parses a binary table TFORMN keyword value
+     */
+    [[nodiscard]] NFITS_PUBLIC std::expected<BinFieldForm, Error> ParseBinTable_TFORMN(const std::string& tformn);
 }
 
 #endif //NFITS_SRC_PARSING_H

@@ -30,25 +30,13 @@ namespace NFITS
          */
         [[nodiscard]] std::optional<const KeywordRecord*> GetFirstKeywordRecord(const std::string& keywordName) const;
 
-        /**
-         * Helper method which looks through all header blocks and returns the first KeywordRecord it finds matching
-         * the provided keyword name, interpreted as an integer.
-         *
-         * @param keywordName The keyword name to search for
-         *
-         * @return The integer value of the first matching keyword record, or std::nullopt if no such keyword record exists
-         */
+        //
+        // Helper methods which look through all header blocks and returns the first KeywordRecord it finds matching
+        // the provided keyword name, interpreted as the specified type.
         [[nodiscard]] std::expected<int64_t, Error> GetFirstKeywordRecord_AsInteger(const std::string& keywordName) const;
-
-        /**
-         * Helper method which looks through all header blocks and returns the first KeywordRecord it finds matching
-         * the provided keyword name, interpreted as a real.
-         *
-         * @param keywordName The keyword name to search for
-         *
-         * @return The real value of the first matching keyword record, or std::nullopt if no such keyword record exists
-         */
         [[nodiscard]] std::expected<double, Error> GetFirstKeywordRecord_AsReal(const std::string& keywordName) const;
+        [[nodiscard]] std::expected<bool, Error> GetFirstKeywordRecord_AsLogical(const std::string& keywordName) const;
+        [[nodiscard]] std::expected<std::string, Error> GetFirstKeywordRecord_AsString(const std::string& keywordName) const;
 
         /**
          * The header blocks that define this Header

@@ -29,7 +29,7 @@ std::expected<uintmax_t, Error> FITSBlockSource::GetNumBlocks() const
 
     if (*byteSize % BLOCK_BYTE_SIZE != 0)
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "FITSBlockSource::GetNumBlocks: Source byte size isn't a multiple of block size"));
+        return std::unexpected(Error::Msg("FITSBlockSource::GetNumBlocks: Source byte size isn't a multiple of block size"));
     }
 
     return (*byteSize / BLOCK_BYTE_SIZE).value;

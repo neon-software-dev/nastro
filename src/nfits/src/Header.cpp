@@ -31,7 +31,7 @@ std::expected<int64_t, Error> Header::GetFirstKeywordRecord_AsInteger(const std:
     const auto keywordRecord = GetFirstKeywordRecord(keywordName);
     if (!keywordRecord)
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "No such keyword record exists: {}", keywordName));
+        return std::unexpected(Error::Msg("No such keyword record exists: {}", keywordName));
     }
 
     return (*keywordRecord)->GetKeywordValue_AsInteger();
@@ -42,10 +42,32 @@ std::expected<double, Error> Header::GetFirstKeywordRecord_AsReal(const std::str
     const auto keywordRecord = GetFirstKeywordRecord(keywordName);
     if (!keywordRecord)
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "No such keyword record exists: {}", keywordName));
+        return std::unexpected(Error::Msg("No such keyword record exists: {}", keywordName));
     }
 
     return (*keywordRecord)->GetKeywordValue_AsReal();
+}
+
+std::expected<bool, Error> Header::GetFirstKeywordRecord_AsLogical(const std::string& keywordName) const
+{
+    const auto keywordRecord = GetFirstKeywordRecord(keywordName);
+    if (!keywordRecord)
+    {
+        return std::unexpected(Error::Msg("No such keyword record exists: {}", keywordName));
+    }
+
+    return (*keywordRecord)->GetKeywordValue_AsLogical();
+}
+
+std::expected<std::string, Error> Header::GetFirstKeywordRecord_AsString(const std::string& keywordName) const
+{
+    const auto keywordRecord = GetFirstKeywordRecord(keywordName);
+    if (!keywordRecord)
+    {
+        return std::unexpected(Error::Msg("No such keyword record exists: {}", keywordName));
+    }
+
+    return (*keywordRecord)->GetKeywordValue_AsString();
 }
 
 }

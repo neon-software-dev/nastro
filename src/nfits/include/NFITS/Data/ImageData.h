@@ -32,9 +32,15 @@ namespace NFITS
         public:
 
             ImageData() = default;
-            ~ImageData() override = default;
 
-            [[nodiscard]] static std::expected<std::unique_ptr<ImageData>, Error> LoadFromFileBlocking(const FITSFile* pFile, const HDU* pHDU);
+            ImageData(ImageSliceSpan sliceSpan,
+                      std::vector<double> physicalValues,
+                      std::vector<PhysicalStats> slicePhysicalStats,
+                      std::vector<PhysicalStats> sliceCubePhysicalStats);
+
+            ImageData(ImageData&& other) = default;
+
+            ~ImageData() override = default;
 
             //
             // Data
@@ -59,6 +65,9 @@ namespace NFITS
             std::vector<PhysicalStats> m_slicePhysicalStats;
             std::vector<PhysicalStats> m_sliceCubePhysicalStats;
     };
+
+    [[nodiscard]] NFITS_PUBLIC std::expected<std::unique_ptr<ImageData>, Error>
+        LoadImageDataFromFileBlocking(const FITSFile* pFile, const HDU* pHDU);
 }
 
 #endif //NFITS_INCLUDE_NFITS_DATA_IMAGEDATA_H

@@ -14,17 +14,17 @@ namespace NFITS
 
 uint64_t GetNumSlicesInSpan(const ImageSliceSpan& span)
 {
-    assert(span.size() >= 2);
+    if (span.empty())       { return 0; }
+    if (span.size() <= 2)   { return 1; }
 
-    return span.size() == 2 ? 1U :
-        std::accumulate(span.cbegin() + 2, span.cend(), 1U, std::multiplies<>());
+    return std::accumulate(span.cbegin() + 2, span.cend(), 1U, std::multiplies<>());
 }
 
 std::expected<uintmax_t, Error> SliceKeyToLinearIndex(const ImageSliceSpan& span, const ImageSliceKey& key)
 {
     if (span.size() > 999)
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "SliceKeyToLinearIndex: Out of bounds axis count"));
+        return std::unexpected(Error::Msg("SliceKeyToLinearIndex: Out of bounds axis count"));
     }
 
     uintmax_t currentMultiple = 1;
@@ -46,7 +46,7 @@ std::expected<ImageSliceKey, Error> SliceLinearIndexToKey(const ImageSliceSpan& 
 {
     if (index >= GetNumSlicesInSpan(span))
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "SliceLinearIndexToKey: Out of bounds index"));
+        return std::unexpected(Error::Msg("SliceLinearIndexToKey: Out of bounds index"));
     }
 
     // If 2D or less, only 1 slice ever exists, return a default key

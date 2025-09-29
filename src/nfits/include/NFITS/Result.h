@@ -30,6 +30,11 @@ namespace NFITS
         [[nodiscard]] static Result Success() { return {}; }
 
         /**
+         * @return A Fail result
+         */
+        [[nodiscard]] static Result Fail() { return Result(std::nullopt); }
+
+        /**
          * @return A Fail result, with a provided Error
          */
         [[nodiscard]] static Result Fail(Error error) { return Result(error); }
@@ -38,9 +43,9 @@ namespace NFITS
          * @return A Fail result, with an Error constructed with the provided ErrorType and message
          */
         template<typename... Args>
-        [[nodiscard]] static Result Fail(ErrorType errorType, std::string_view rt_fmt_str, Args&&... args)
+        [[nodiscard]] static Result Fail(std::string_view rt_fmt_str, Args&&... args)
         {
-            return Result(Error::Msg(errorType, rt_fmt_str, args...));
+            return Result(Error::Msg(rt_fmt_str, args...));
         }
 
         /**

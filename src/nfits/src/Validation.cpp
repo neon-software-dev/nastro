@@ -46,7 +46,7 @@ Result ValidatePrimaryHeader(const Header& header)
     // one or more 2880-byte header blocks[..]"
     if (header.headerBlocks.empty())
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Header must contain one or more header blocks");
+        return Result::Fail("ValidatePrimaryHeader: Header must contain one or more header blocks");
     }
 
     // [4.4.1.1.]
@@ -60,23 +60,23 @@ Result ValidatePrimaryHeader(const Header& header)
 
     if (!HeaderBlockContainsKeywordName(firstHeaderBlock, KEYWORD_NAME_SIMPLE, 0U))
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: First keyword must be the SIMPLE keyword");
+        return Result::Fail("ValidatePrimaryHeader: First keyword must be the SIMPLE keyword");
     }
 
     if (!HeaderBlockContainsKeywordName(firstHeaderBlock, KEYWORD_NAME_BITPIX, 1U))
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Second keyword must be the BITPIX keyword");
+        return Result::Fail("ValidatePrimaryHeader: Second keyword must be the BITPIX keyword");
     }
 
     if (!HeaderBlockContainsKeywordName(firstHeaderBlock, KEYWORD_NAME_NAXIS, 2U))
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Third keyword must be the NAXIS keyword");
+        return Result::Fail("ValidatePrimaryHeader: Third keyword must be the NAXIS keyword");
     }
 
     const auto naxisValue = firstHeaderBlock.keywordRecords.at(2).GetKeywordValue_AsInteger();
     if (!naxisValue)
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: NAXIS keyword failed parsing");
+        return Result::Fail("ValidatePrimaryHeader: NAXIS keyword failed parsing");
     }
 
     // [4.4.1.1.]
@@ -84,7 +84,7 @@ Result ValidatePrimaryHeader(const Header& header)
     // integer no greater than 999"
     if (!(*naxisValue > 0 && *naxisValue <= 999))
     {
-        return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: NAXIS value out of range: {}", *naxisValue);
+        return Result::Fail("ValidatePrimaryHeader: NAXIS value out of range: {}", *naxisValue);
     }
 
     for (unsigned int naxis = 0; naxis < *naxisValue; ++naxis)
@@ -97,13 +97,13 @@ Result ValidatePrimaryHeader(const Header& header)
 
         if (!HeaderBlockContainsKeywordName(firstHeaderBlock, naxisnKeywordName, naxisnKeywordIndex))
         {
-            return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: Failed to find properly positioned {} keyword", naxisnKeywordName);
+            return Result::Fail("ValidatePrimaryHeader: Failed to find properly positioned {} keyword", naxisnKeywordName);
         }
 
         const auto naxisnValue = firstHeaderBlock.keywordRecords.at(naxisnKeywordIndex).GetKeywordValue_AsInteger();
         if (!naxisnValue)
         {
-            return Result::Fail(ErrorType::Validation, "ValidatePrimaryHeader: {} keyword failed parsing", naxisnKeywordName);
+            return Result::Fail("ValidatePrimaryHeader: {} keyword failed parsing", naxisnKeywordName);
         }
     }
 

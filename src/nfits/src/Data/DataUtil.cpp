@@ -6,6 +6,7 @@
  
 #include <NFITS/Data/DataUtil.h>
 #include <NFITS/Data/ImageData.h>
+#include <NFITS/Data/BinTableImageData.h>
 #include <NFITS/HDU.h>
 
 namespace NFITS
@@ -13,20 +14,26 @@ namespace NFITS
 
 std::expected<std::unique_ptr<Data>, Error> LoadHDUDataBlocking(const FITSFile* pFile, const HDU* pHDU)
 {
-    switch (pHDU->type)
+    if (pHDU->type == HDU::Type::Image)
     {
-        case HDU::Type::Image:
+        auto pData = LoadImageDataFromFileBlocking(pFile, pHDU);
+        if (!pData)
         {
-            auto pImageData = ImageData::LoadFromFileBlocking(pFile, pHDU);
-            if (!pImageData)
-            {
-                return std::unexpected(pImageData.error());
-            }
-            return pImageData;
+            return std::unexpected(pData.error());
         }
-
-        default: return std::unexpected(Error::Msg(ErrorType::General, "LoadHDUDataBlocking: Unsupported HDU type"));
+        return pData;
     }
+    else if (pHDU->type == HDU::Type::BinTable && HDUContainsBinTableImage(*pHDU))
+    {
+        auto pData = LoadBinTableImageDataFromFileBlocking(pFile, pHDU);
+        if (!pData)
+        {
+            return std::unexpected(pData.error());
+        }
+        return pData;
+    }
+
+    return std::unexpected(Error::Msg("LoadHDUDataBlocking: Unsupported HDU type"));
 }
 
 }

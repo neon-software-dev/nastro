@@ -22,7 +22,6 @@ TEST(ParseKeywordName, BadChars)
 
     // Assert
     EXPECT_FALSE(result);
-    EXPECT_EQ(result.error().type, ErrorType::Parse);
 }
 
 TEST(ParseKeywordName, BadChars2)
@@ -35,7 +34,6 @@ TEST(ParseKeywordName, BadChars2)
 
     // Assert
     EXPECT_FALSE(result);
-    EXPECT_EQ(result.error().type, ErrorType::Parse);
 }
 
 TEST(ParseKeywordName, GoodChars)
@@ -62,7 +60,6 @@ TEST(ParseKeywordName, LeadingSpace)
 
     // Assert
     EXPECT_FALSE(result);
-    EXPECT_EQ(result.error().type, ErrorType::Parse);
 }
 
 TEST(ParseKeywordName, TrailingSpaces)
@@ -89,7 +86,6 @@ TEST(ParseKeywordName, EmbeddedSpaces)
 
     // Assert
     EXPECT_FALSE(result);
-    EXPECT_EQ(result.error().type, ErrorType::Parse);
 }
 
 TEST(ParseKeywordName, FullLength)

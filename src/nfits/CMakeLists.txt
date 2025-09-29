@@ -31,6 +31,7 @@ file(GLOB NFITS_Util_SourceFiles CONFIGURE_DEPENDS src/Util/*.cpp src/Util/*.h)
 file(GLOB NFITS_Data_SourceFiles CONFIGURE_DEPENDS src/Data/*.cpp src/Data/*.h)
 file(GLOB NFITS_Image_SourceFiles CONFIGURE_DEPENDS src/Image/*.cpp src/Image/*.h)
 file(GLOB NFITS_ColorMaps_SourceFiles CONFIGURE_DEPENDS src/ColorMaps/*.cpp src/ColorMaps/*.h)
+file(GLOB NFITS_Codec_SourceFiles CONFIGURE_DEPENDS src/Codec/*.cpp src/Codec/*.h)
 
 add_library(NFITS
 	${NFITS_PublicIncludes}
@@ -43,6 +44,7 @@ add_library(NFITS
 	${NFITS_Data_SourceFiles}
 	${NFITS_Image_SourceFiles}
 	${NFITS_ColorMaps_SourceFiles}
+	${NFITS_Codec_SourceFiles}
 )
 
 if (BUILD_SHARED_LIBS)

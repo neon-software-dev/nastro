@@ -99,7 +99,7 @@ std::expected<std::unique_ptr<NFITS::Data>, bool> LoadHDUDataWorker::LoadHDU(con
     {
         std::cerr << "LoadHDUDataWorker::DoWork: Failed to load HDU data: " << pHDUData.error().msg << std::endl;
         emit Signal_WorkCompleteError();
-        std::unexpected(false);
+        return std::unexpected(false);
     }
     if (IsCancelled())
     {

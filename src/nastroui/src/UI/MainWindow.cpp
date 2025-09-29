@@ -177,8 +177,8 @@ void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
     }
 
     auto pData = std::move(results.at(0));
-
     const auto hdu = pLoadHDUDataWorker->GetHDUs().at(0);
+
     const auto filePath = hdu.filePath;
     const auto hduIndex = hdu.hduIndex;
 
@@ -188,16 +188,33 @@ void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
         {
             auto pImageData = std::unique_ptr<NFITS::ImageData>{dynamic_cast<NFITS::ImageData*>(pData.release())};
 
-            const auto pImageWidget = new ImageWidget(
-                std::move(pImageData),
-                FileHDU{.filePath = filePath, .hduIndex = hduIndex},
-                this
-            );
+            // If the loaded image has slices, open an ImageWidget to display them
+            if (NFITS::GetNumSlicesInSpan(pImageData->GetImageSliceSpan()) > 0)
+            {
+                const auto pImageWidget = new ImageWidget(
+                    std::move(pImageData),
+                    FileHDU{.filePath = filePath, .hduIndex = hduIndex},
+                    this
+                );
 
-            auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
-            pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
-            pSubWindow->setWindowTitle(QString::fromStdString(std::format("{} - HDU {}", filePath.filename().string(), hduIndex)));
-            pSubWindow->show();
+                auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
+                pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
+                pSubWindow->setWindowTitle(QString::fromStdString(std::format("{} - HDU {}", filePath.filename().string(), hduIndex)));
+                pSubWindow->show();
+            }
+            // Otherwise, if no slices, don't open a window; just mark the HDU as being activated. This
+            // supports the user activating empty primary HDUs and having the Headers view display its
+            // headers, without needing an empty MdiWidget opened for it.
+            else
+            {
+                m_pVM->OnHDUActivated(hdu);
+            }
+        }
+        break;
+
+        default:
+        {
+            // no-op
         }
         break;
     }

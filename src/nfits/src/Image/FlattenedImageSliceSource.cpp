@@ -18,7 +18,7 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
 {
     if (sources.empty())
     {
-        return std::unexpected(Error::Msg(ErrorType::General, "Must provide at least one source"));
+        return std::unexpected(Error::Msg("Must provide at least one source"));
     }
 
     std::optional<uint64_t> width;
@@ -33,7 +33,7 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
         const auto localSpan = source->GetImageSliceSpan();
         if (localSpan.size() < 2)
         {
-            return std::unexpected(Error::Msg(ErrorType::General, "Slice sources must be at least two dimensional"));
+            return std::unexpected(Error::Msg("Slice sources must be at least two dimensional"));
         }
 
         // Source width/height must match all other source's width/height
@@ -42,7 +42,7 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
 
         if ((width && (*width != localWidth)) || (height && (*height != localHeight)))
         {
-            return std::unexpected(Error::Msg(ErrorType::General, "Slice sources must have matching base dimensions"));
+            return std::unexpected(Error::Msg("Slice sources must have matching base dimensions"));
         }
 
         width = localWidth;
@@ -58,13 +58,13 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
             const auto localSliceKey = SliceLinearIndexToKey(localSpan, localSliceIndex);
             if (!localSliceKey)
             {
-                return std::unexpected(Error::Msg(ErrorType::General, "Out of bounds local slice key"));
+                return std::unexpected(Error::Msg("Out of bounds local slice key"));
             }
 
             const auto localSlice = source->GetImageSlice(*localSliceKey);
             if (!localSlice)
             {
-                return std::unexpected(Error::Msg(ErrorType::General, "Out of bounds local slice"));
+                return std::unexpected(Error::Msg("Out of bounds local slice"));
             }
 
             globalSliceSpans.push_back(localSlice->physicalValues);
