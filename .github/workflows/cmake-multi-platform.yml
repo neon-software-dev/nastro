@@ -23,16 +23,13 @@ jobs:
       #
       # To add more build types (Release, Debug, RelWithDebInfo, etc.) customize the build_type list.
       matrix:
-        os: [ubuntu-latest]
+        os: [windows-latest]
         build_type: [Release]
-        c_compiler: [gcc, clang]
+        c_compiler: [cl]
         include:
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
-          - os: ubuntu-latest
-            c_compiler: clang
-            cpp_compiler: clang++
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
 
     steps:
     - uses: actions/checkout@v4
@@ -49,10 +46,6 @@ jobs:
       with:
         python-version: '3.x'
 
-    - name: Install system dependencies (Linux)
-      if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install -y libsystemd-dev libcryptsetup-dev libcryptsetup12 libltdl-dev
-
     - name: Cache vcpkg
       uses: actions/cache@v4
       with:
@@ -62,7 +55,7 @@ jobs:
           ${{ runner.os }}-vcpkg-
 
     - name: Prepare dependencies
-      run: python prepare_dependencies.py --no-systemd
+      run: python prepare_dependencies.py
       working-directory: ${{ github.workspace }}/external/
 
     - name: Configure CMake
@@ -74,7 +67,6 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DVCPKG_TARGET_TRIPLET=x64-linux-no-systemd
         -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/external/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DBUILD_SHARED_LIBS=OFF
         -DBUILD_TESTING=OFF

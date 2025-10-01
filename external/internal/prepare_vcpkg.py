@@ -19,20 +19,15 @@ def ensure_vcpkg():
     else:
         os.system('./bootstrap-vcpkg.sh --disableMetrics')
 
-    # Install/copy custom target triplets
-    shutil.copy('../x64-linux-no-systemd.cmake', './triplets/')
-
     print("[Prepared vcpkg]")
     
 
-def install_dep(dep, args, linuxDynamic):
+def install_dep(dep, linuxDynamic):
     depStr = dep
     
     # If we're on linux and the dependency should be linux dynamic, use the custom triplet
     if os.name != 'nt' and linuxDynamic:
     	depStr = dep + ' --triplet x64-linux-dynamic'
-    elif args.no_systemd:
-        depStr = depStr + ' --triplet x64-linux-no-systemd'
 
     print('[Installing: %s]' % (depStr))
     
@@ -42,14 +37,14 @@ def install_dep(dep, args, linuxDynamic):
         os.system('./vcpkg install %s' % (depStr))
 
 
-def install_dependencies(args):
+def install_dependencies():
     # Switch to vcpkg dir
     os.chdir('vcpkg')
 	
     #Install dependencies
-    install_dep('qtbase[widgets,gui]', args, False)
-    install_dep('qtcharts', args, False)
-    install_dep('gtest', args, False)
+    install_dep('qtbase[widgets,gui]', False)
+    install_dep('qtcharts', False)
+    install_dep('gtest', False)
 
     print("[Prepared vcpkg]")
 
@@ -62,6 +57,6 @@ def prepare_vcpkg(args):
     
     print("[Installing dependencies]")
     os.chdir(external_dir)
-    install_dependencies(args)
+    install_dependencies()
     
 
