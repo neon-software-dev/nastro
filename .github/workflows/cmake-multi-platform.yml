@@ -62,7 +62,7 @@ jobs:
           ${{ runner.os }}-vcpkg-
 
     - name: Prepare dependencies
-      run: python prepare_dependencies.py
+      run: python prepare_dependencies.py --no-systemd
       working-directory: ${{ github.workspace }}/external/
 
     - name: Configure CMake
@@ -74,6 +74,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DVCPKG_TARGET_TRIPLET=x64-linux-no-systemd
         -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/external/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DBUILD_SHARED_LIBS=OFF
         -DBUILD_TESTING=OFF
