@@ -17,7 +17,7 @@ uint64_t GetNumSlicesInSpan(const ImageSliceSpan& span)
     if (span.empty())       { return 0; }
     if (span.size() <= 2)   { return 1; }
 
-    return std::accumulate(span.cbegin() + 2, span.cend(), 1U, std::multiplies<>());
+    return std::accumulate(span.cbegin() + 2U, span.cend(), uint64_t{1U}, std::multiplies<>());
 }
 
 std::expected<uintmax_t, Error> SliceKeyToLinearIndex(const ImageSliceSpan& span, const ImageSliceKey& key)
@@ -61,15 +61,15 @@ std::expected<ImageSliceKey, Error> SliceLinearIndexToKey(const ImageSliceSpan& 
 
     for (std::size_t x = span.size() - 1; x >= 2; --x)
     {
-        const uintmax_t higherAxesMultiple =
-            std::accumulate(span.cbegin() + 2,
+        const auto higherAxesMultiple =
+            std::accumulate(span.cbegin() + 2U,
                             span.cbegin() + static_cast<ImageSliceSpan::difference_type>(x),
-                            1U,
+                            uint64_t{1},
                             std::multiplies<>());
 
         const auto quotient = working / higherAxesMultiple;
 
-        key.insert({x + 1, quotient});
+        key.insert({static_cast<unsigned int>(x + 1), quotient});
 
         working -= quotient * higherAxesMultiple;
     }

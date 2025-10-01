@@ -268,7 +268,7 @@ void MainWindow::Slot_CompareHDUs_LoadHDUData_Complete(Nastro::Worker* pWorker)
     // Create an ImageWidget displaying the flattened slice source
     //
     const auto sourceDescriptionsCombined = sourceDescriptions | std::views::join_with(std::string(", "));
-    const auto sourceDescriptionsStr = std::string(sourceDescriptionsCombined.cbegin(), sourceDescriptionsCombined.cend());
+    const auto sourceDescriptionsStr = std::string(sourceDescriptionsCombined.begin(), sourceDescriptionsCombined.end());
     const auto windowTitle = std::format("Comparing: {}", sourceDescriptionsStr);
 
     const auto pImageWidget = new ImageWidget(std::move(*flattenedSliceSource), std::nullopt, this);

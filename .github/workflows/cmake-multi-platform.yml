@@ -49,8 +49,10 @@ jobs:
     - name: Cache vcpkg
       uses: actions/cache@v4
       with:
-        path: external/vcpkg
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('${{ github.workspace }}/external/prepare_dependencies.py') }}
+        path: |
+          ${{ runner.workspace }}/external/vcpkg/downloads
+          ${{ runner.workspace }}/external/vcpkg/installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('external/prepare_dependencies.py', 'external/internal/prepare_vcpkg.py') }}
         restore-keys: |
           ${{ runner.os }}-vcpkg-
 

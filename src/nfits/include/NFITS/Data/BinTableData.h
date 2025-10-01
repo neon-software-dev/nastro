@@ -15,6 +15,7 @@
 #include <memory>
 #include <vector>
 #include <optional>
+#include <span>
 
 namespace NFITS
 {

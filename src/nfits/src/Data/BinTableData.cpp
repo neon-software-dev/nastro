@@ -103,7 +103,7 @@ void RawDataToRawRows(std::vector<BinTableRowBytes>& out, const uintmax_t& rowBy
     for (std::size_t offset = 0; offset < data.size(); offset += rowByteSize)
     {
         const auto rowSpan = data.subspan(offset, rowByteSize);
-        out.emplace_back(rowSpan.cbegin(), rowSpan.cend());
+        out.emplace_back(rowSpan.begin(), rowSpan.end());
     }
 }
 

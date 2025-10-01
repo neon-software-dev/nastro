@@ -77,7 +77,7 @@ std::expected<std::vector<double>, Error> ReadDataAsPhysicalValues(const FITSFil
     const auto dataBlockEndIndex = dataBlockStartIndex + pHDU->GetDataBlockCount();
     const auto dataByteSize = pHDU->GetDataByteSize();
 
-    const auto numPhysicalValues = std::accumulate(metadata.naxisns.cbegin(), metadata.naxisns.cend(), 1, std::multiplies<>());
+    const auto numPhysicalValues = std::accumulate(metadata.naxisns.cbegin(), metadata.naxisns.cend(), int64_t{1}, std::multiplies<>());
 
     std::vector<double> physicalValues;
     physicalValues.reserve(static_cast<std::size_t>(numPhysicalValues));

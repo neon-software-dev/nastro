@@ -96,10 +96,10 @@ inline std::span<const double> GetSliceDataSpan(const ImageSliceSpan& sliceSpan,
 
 inline uint64_t GetNumSliceCubes(const ImageSliceSpan& sliceSpan)
 {
-    if (sliceSpan.empty())      { return 0; }
-    if (sliceSpan.size() <= 3)  { return 1; }
+    if (sliceSpan.empty())      { return 0U; }
+    if (sliceSpan.size() <= 3)  { return 1U; }
 
-    return std::accumulate(sliceSpan.cbegin() + 3U, sliceSpan.cend(), 1U, std::multiplies<>());
+    return std::accumulate(sliceSpan.cbegin() + 3U, sliceSpan.cend(), uint64_t{1U}, std::multiplies<>());
 }
 
 inline uintmax_t GetSliceCubeDataSize(const ImageSliceSpan& sliceSpan)

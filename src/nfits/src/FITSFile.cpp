@@ -110,7 +110,7 @@ std::expected<uintmax_t, Error> GetHDUDataByteSize_Primary(const Header& header)
         naxisNs.push_back(*naxisnValue);
     }
 
-    const intmax_t naxisNsProduct = std::accumulate(naxisNs.begin(), naxisNs.end(), 1, std::multiplies<>());
+    const auto naxisNsProduct = std::accumulate(naxisNs.cbegin(), naxisNs.cend(), int64_t{1}, std::multiplies<>());
 
     /**
      * [4.4.1.1. Primary header]
@@ -159,7 +159,7 @@ std::expected<uintmax_t, Error> GetHDUDataByteSize_Extension(const Header& heade
         naxisNs.push_back(*naxisnValue);
     }
 
-    const auto naxisNsProduct = std::accumulate(naxisNs.begin(), naxisNs.end(), 1, std::multiplies<>());
+    const auto naxisNsProduct = std::accumulate(naxisNs.cbegin(), naxisNs.cend(), int64_t{1}, std::multiplies<>());
 
     /**
      * [4.4.1.2. Conforming extensions]

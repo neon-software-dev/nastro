@@ -469,7 +469,7 @@ std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywor
         const auto valueSpan = keywordRecordSpan.subspan(10, 70);
 
         const auto it = std::ranges::find_if(valueSpan, [](const char& c) { return !IsSpaceChar(c); });
-        if (it != valueSpan.cend())
+        if (it != valueSpan.end())
         {
             logicalChar = *it;
         }
