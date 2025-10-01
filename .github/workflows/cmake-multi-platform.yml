@@ -58,7 +58,8 @@ jobs:
           ${{ runner.os }}-vcpkg-
 
     - name: Prepare dependencies
-      run: python ${{ github.workspace }}/external/prepare_dependencies.py
+      run: python prepare_dependencies.py
+      working-directory: ${{ github.workspace }}/external/
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -69,7 +70,7 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/external/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DBUILD_SHARED_LIBS=OFF
         -DBUILD_TESTING=OFF
         -S ${{ github.workspace }}/src
