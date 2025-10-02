@@ -69,5 +69,5 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         $qt_tools_dir = "${{ github.workspace }}/external/vcpkg/installed/x64-windows/tools/Qt6" 
-        $app_executable = "${{ github.workspace }}/${{ steps.strings.outputs.build-output-dir }}/nastroui/Release/nastroui.exe"
+        $app_executable = "${{ steps.strings.outputs.build-output-dir }}/nastroui/Release/nastroui.exe"
         & "$qt_tools_dir/bin/windeployqt.exe" "$app_executable"
