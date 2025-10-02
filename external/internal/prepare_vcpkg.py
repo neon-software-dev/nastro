@@ -5,10 +5,6 @@ import subprocess
 VCPKG_BASELINE_VERSION = "2025.07.25"
 
 def ensure_vcpkg():
-    if os.path.isdir('vcpkg'):
-        print("vcpkg already exists, skipping")
-        return
-
     subprocess.run(['git', 'clone', "https://github.com/microsoft/vcpkg.git"])
     os.chdir('vcpkg')
     
@@ -51,6 +47,10 @@ def install_dependencies():
 
 def prepare_vcpkg(args):
     external_dir = os.getcwd()
+    
+    if os.path.isdir('vcpkg'):
+        print("vcpkg already exists, skipping")
+        return
 
     print("[Ensuring vcpkg]")
     ensure_vcpkg()
