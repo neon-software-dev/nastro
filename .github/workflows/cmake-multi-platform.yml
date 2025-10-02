@@ -65,3 +65,10 @@ jobs:
 
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+
+    - name: Execute windeployqt
+      if: runner.os == 'Windows'
+      run: |
+        $qt_tools_dir = "{{ github.workspace }}/external/vcpkg/installed/x64-windows/tools/Qt6" 
+        $app_executable = "{{ github.workspace }}/${{ steps.strings.outputs.build-output-dir }}/nastroui/Release/nastroui.exe"
+        & "$qt_tools_dir/bin/windeployqt.exe" "$app_executable"
