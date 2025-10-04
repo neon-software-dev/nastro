@@ -8,6 +8,7 @@
 #define SRC_UI_IMAGEWIDGET_H
 
 #include "MdiWidget.h"
+#include "PixelDetailsWidget.h"
 
 #include <NFITS/Image/ImageSliceSource.h>
 
@@ -55,6 +56,8 @@ namespace Nastro
             void Slot_Histogram_MinVertLineChanged(double physicalValue, bool fromDrag);
             void Slot_Histogram_MaxVertLineChanged(double physicalValue, bool fromDrag);
 
+            void Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos);
+
         private:
 
             void InitUI();
@@ -71,6 +74,7 @@ namespace Nastro
 
             ImageControlsToolbar* m_pImageControlsToolbar{nullptr};
             ImageRenderToolbar* m_pImageRenderToolbar{nullptr};
+            PixelDetailsWidget* m_pPixelDetailsWidget{nullptr};
             ImageViewWidget* m_pImageViewWidget{nullptr};
             HistogramWidget* m_pHistogramWidget{nullptr};
 

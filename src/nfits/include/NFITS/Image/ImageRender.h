@@ -17,7 +17,7 @@ namespace NFITS
     /**
      * Stores the pixel components/values for a rendered image.
      *
-     * Image bytes are stored tightly packed, from top to bottom.
+     * Image bytes are stored tightly packed, bottom to top.
      */
     struct NFITS_PUBLIC ImageRender
     {

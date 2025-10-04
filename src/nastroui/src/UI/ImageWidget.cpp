@@ -11,6 +11,7 @@
 #include "HistogramWidget.h"
 #include "ImageControlsToolbar.h"
 #include "ImageRenderToolbar.h"
+#include "PixelDetailsWidget.h"
 
 #include <NFITS/Data/ImageData.h>
 #include <NFITS/Util/ImageUtil.h>
@@ -113,9 +114,15 @@ void ImageWidget::InitUI()
     }
 
     //
+    // Pixel Details Widget
+    //
+    m_pPixelDetailsWidget = new PixelDetailsWidget();
+
+    //
     // Image View
     //
     m_pImageViewWidget = new ImageViewWidget();
+    connect(m_pImageViewWidget, &ImageViewWidget::Signal_OnImageViewPixelHovered, this, &ImageWidget::Slot_ImageViewWidget_ImageViewPixelHovered);
 
     //
     // Histogram View
@@ -154,6 +161,7 @@ void ImageWidget::InitUI()
     {
         pMainLayout->addWidget(pSelectionToolbar);
     }
+    pMainLayout->addWidget(m_pPixelDetailsWidget);
     pMainLayout->addWidget(pSplitter, 1);
     pMainLayout->addWidget(m_pErrorWidget);
 
@@ -316,6 +324,34 @@ void ImageWidget::Slot_Histogram_MaxVertLineChanged(double physicalValue, bool f
     }
 
     m_pImageRenderToolbar->SetCustomScalingRangeMax(physicalValue);
+}
+
+void ImageWidget::Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos)
+{
+    if (!pixelPos)
+    {
+        m_pPixelDetailsWidget->OnPixelChanged(std::nullopt);
+        return;
+    }
+
+    const auto imageSlice = m_pImageSliceSource->GetImageSlice(m_imageSliceKey);
+    if (!imageSlice)
+    {
+        m_pPixelDetailsWidget->OnPixelChanged(std::nullopt);
+        return;
+    }
+
+    const auto pixelX = pixelPos->first;
+    const auto pixelY = pixelPos->second;
+    const auto sliceWidth = m_pImageSliceSource->GetImageSliceSpan().at(0);
+
+    const auto dataIndex = (pixelY * sliceWidth) + pixelX;
+    assert(dataIndex < imageSlice->physicalValues.size());
+
+    m_pPixelDetailsWidget->OnPixelChanged(PixelDetails{
+        .position = *pixelPos,
+        .physicalValue = imageSlice->physicalValues[dataIndex]
+    });
 }
 
 }

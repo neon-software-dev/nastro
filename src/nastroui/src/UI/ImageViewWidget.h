@@ -13,6 +13,8 @@
 #include <QGraphicsView>
 
 #include <memory>
+#include <utility>
+#include <optional>
 
 class QGraphicsScene;
 class QGraphicsPixmapItem;
@@ -36,10 +38,16 @@ namespace Nastro
              */
             [[nodiscard]] QImage GetCurrentViewRender();
 
+        signals:
+
+            void Signal_OnImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos);
+
         protected:
 
             void resizeEvent(QResizeEvent* pEvent) override;
             void wheelEvent(QWheelEvent* pEvent) override;
+            void mouseMoveEvent(QMouseEvent *event) override;
+            void leaveEvent(QEvent *event) override;
 
         private:
 

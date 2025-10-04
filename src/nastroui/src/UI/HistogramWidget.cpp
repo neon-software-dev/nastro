@@ -248,7 +248,7 @@ void HistogramWidget::HandleVertLineRelease(VertLine& vertLine)
 QString HistogramWidget::GetVertLineName(bool isMaxLine, const double& physicalValue)
 {
     const auto baseName = isMaxLine ? tr("Max") : tr("Min");
-    const auto lineName = std::format("{} (Physical: {:.2f})", baseName.toStdString(), physicalValue);
+    const auto lineName = std::format("{} (Physical: {:.4f})", baseName.toStdString(), physicalValue);
     return QString::fromStdString(lineName);
 }
 

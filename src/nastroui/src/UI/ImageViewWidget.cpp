@@ -20,6 +20,7 @@ ImageViewWidget::ImageViewWidget(QWidget* pParent)
     setScene(m_pScene);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setDragMode(QGraphicsView::ScrollHandDrag);
+    setMouseTracking(true); // Allow mouse hover to generate mouseMoveEvents
 }
 
 ImageViewWidget::~ImageViewWidget() = default;
@@ -29,6 +30,17 @@ void ImageViewWidget::SetImageView(const NFITS::ImageView& imageView)
     m_imageView = imageView;
 
     RebuildScene();
+}
+
+QImage ImageViewWidget::GetCurrentViewRender()
+{
+    auto qImage = QImage(viewport()->size(), QImage::Format_ARGB32);
+    qImage.fill(Qt::transparent); // TODO: Make configurable
+
+    auto painter = QPainter(&qImage);
+    render(&painter);
+
+    return qImage;
 }
 
 static QImage QImageFromImageRender(const NFITS::ImageRender& imageRender)
@@ -43,7 +55,9 @@ static QImage QImageFromImageRender(const NFITS::ImageRender& imageRender)
 
     for (std::size_t y = 0; y < imageRender.height; ++y)
     {
-        const auto pImageRenderScanLine = imageRender.GetScanLineBytesStart(y);
+        // ImageRenders are stored bottom to top, whereas QImage expects top to bottom, so inverse fill
+        // the QImage from data from ImageRender rows
+        const auto pImageRenderScanLine = imageRender.GetScanLineBytesStart(imageRender.height - y - 1);
         const auto pQImageScanLine = qImage.scanLine(static_cast<int>(y));
 
         for (std::size_t x = 0; x < imageRender.width; ++x)
@@ -121,15 +135,44 @@ void ImageViewWidget::wheelEvent(QWheelEvent* pEvent)
     }
 }
 
-QImage ImageViewWidget::GetCurrentViewRender()
+void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    auto qImage = QImage(viewport()->size(), QImage::Format_ARGB32);
-    qImage.fill(Qt::transparent); // TODO: Make configurable
+    QGraphicsView::mouseMoveEvent(event);
 
-    auto painter = QPainter(&qImage);
-    render(&painter);
+    if (m_pPixmapItem == nullptr) { return; }
 
-    return qImage;
+    const auto viewPos = event->pos();
+    const auto scenePos = mapToScene(viewPos);
+    const auto itemPos = m_pPixmapItem->mapFromScene(scenePos);
+
+    // Using floor to get pixelPos rather than itemPos.toPoint() so
+    // that pixel pos stays constant over the full area of a pixel,
+    // only changing at boundaries between pixels
+    auto pixelPos = QPoint(
+        static_cast<int>(std::floor(itemPos.x())),
+        static_cast<int>(std::floor(itemPos.y()))
+    );
+
+    const auto pixmap = m_pPixmapItem->pixmap();
+    if (pixmap.rect().contains(pixelPos))
+    {
+        // Invert y-coordinates as Qt uses top-left as origin whereas FITS uses bottom-left
+        pixelPos.setY(pixmap.height() - pixelPos.y() - 1);
+
+        emit Signal_OnImageViewPixelHovered(std::make_pair(pixelPos.x(), pixelPos.y()));
+    }
+    else
+    {
+        emit Signal_OnImageViewPixelHovered(std::nullopt);
+    }
+}
+
+void ImageViewWidget::leaveEvent(QEvent* event)
+{
+    // Clear hovered pixel when the mouse leaves the widget's area
+    emit Signal_OnImageViewPixelHovered(std::nullopt);
+
+    QWidget::leaveEvent(event);
 }
 
 }

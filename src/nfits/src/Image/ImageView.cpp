@@ -72,10 +72,9 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
 
     for (uint64_t y = 0; y < imageSlice.height; ++y)
     {
-        // FITS convention is for images to be stored bottom to top, while our convention is images
-        // are stored top to bottom, so some vertical swapping here to fill the image from bottom up
-        // as we read FITS image data from top down
-        unsigned char* pScanline = imageRender.GetScanLineBytesStart(imageSlice.height - y - 1);
+        // Note that unofficial FITS standard is for images to be stored bottom to top, so y=0
+        // corresponds to the bottom scanline, visually, of the image
+        unsigned char* pScanline = imageRender.GetScanLineBytesStart(y);
 
         for (uint64_t x = 0; x < imageSlice.width; ++x)
         {
