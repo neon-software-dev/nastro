@@ -148,7 +148,7 @@ std::string GetHDUTypeString(const NFITS::HDU& hdu, bool hasData)
         case NFITS::HDU::Type::Table: return "Table";
         case NFITS::HDU::Type::BinTable:
         {
-            if (NFITS::HDUContainsBinTableImage(hdu)) { return "BinTable Image"; } else { return "BinTable"; }
+            if (hdu.ContainsBinTableImage()) { return "BinTable Image"; } else { return "BinTable"; }
         }
     }
 
@@ -211,7 +211,7 @@ std::string GetDetailString_BinTableImage(const NFITS::HDU& hdu)
 
 std::string GetDetailString_BinTable(const NFITS::HDU& hdu)
 {
-    if (NFITS::HDUContainsBinTableImage(hdu))
+    if (hdu.ContainsBinTableImage())
     {
         return GetDetailString_BinTableImage(hdu);
     }

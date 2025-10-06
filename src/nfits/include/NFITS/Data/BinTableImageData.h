@@ -27,12 +27,6 @@ namespace NFITS
     };
 
     /**
-     * @return Whether the given HDU contains bintable data, which contains
-     * compressed image data
-     */
-    [[nodiscard]] NFITS_PUBLIC bool HDUContainsBinTableImage(const HDU& hdu);
-
-    /**
      * Loads a compressed image from a bintable HDU
      */
     [[nodiscard]] NFITS_PUBLIC std::expected<std::unique_ptr<BinTableImageData>, Error>

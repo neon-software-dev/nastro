@@ -110,10 +110,7 @@ void MainWindowVM::Slot_ImportFiles_WorkFinished(Worker* pWorker)
         newlyImported.insert({fileIt.first, fileIt.second});
     }
 
-    if (!newlyImported.empty())
-    {
-        emit Signal_FilesImported(newlyImported);
-    }
+    emit Signal_FilesImported(newlyImported);
 }
 
 }

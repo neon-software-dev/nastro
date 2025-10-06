@@ -61,6 +61,8 @@ namespace Nastro
             void BindVM();
             void InitialState();
 
+            void AddFiles(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& importedFiles);
+
             [[nodiscard]] std::vector<const FilesTreeItem*> GetSelectedTreeItems() const;
 
         private:

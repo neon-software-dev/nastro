@@ -32,12 +32,19 @@
 namespace Nastro
 {
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(std::optional<std::filesystem::path> initialLaunchPath)
     : QMainWindow(nullptr, Qt::WindowFlags())
+    , m_initialLaunchPath(std::move(initialLaunchPath))
     , m_pVM(std::make_unique<MainWindowVM>(this))
 {
     InitUI();
     BindVM();
+
+    // If an initial launch path is provided, import it immediately
+    if (m_initialLaunchPath)
+    {
+        m_pVM->OnImportFiles({*m_initialLaunchPath});
+    }
 }
 
 void MainWindow::InitUI()
@@ -93,7 +100,49 @@ void MainWindow::InitWidgets()
 
 void MainWindow::BindVM()
 {
+    connect(m_pVM.get(), &MainWindowVM::Signal_FilesImported, this, &MainWindow::Slot_VM_FilesImported);
+}
 
+void MainWindow::Slot_VM_FilesImported(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& files)
+{
+    //
+    // When files have imported, if we had an initial launch path, automatically
+    // load and open the first image in the now loaded file
+    //
+    if (m_initialLaunchPath && !files.empty())
+    {
+        //
+        // Search through the file's HDUs for the first image HDU
+        //
+        const auto fileIt = files.cbegin(); // Note that we only use the first file
+
+        std::optional<std::size_t> firstImageIndex = 0;
+
+        for (std::size_t x = 0; x < fileIt->second.size(); ++x)
+        {
+            const auto hdu = fileIt->second.at(x);
+
+            if (hdu.ContainsAnyTypeOfImageData())
+            {
+                firstImageIndex = x;
+                break;
+            }
+        }
+
+        //
+        // If found a valid image HDU, automatically load and display it
+        //
+        if (firstImageIndex)
+        {
+            LoadAndDisplayHDU(FileHDU{.filePath = fileIt->first, .hduIndex = *firstImageIndex});
+        }
+    }
+
+    //
+    // If we had any initial launch path, forget it once its file has been imported/opened (whether
+    // successfully or not)
+    //
+    m_initialLaunchPath = std::nullopt;
 }
 
 void MainWindow::Slot_File_ImportFiles_ActionTriggered()
@@ -144,10 +193,28 @@ void MainWindow::Slot_File_Exit_ActionTriggered()
 
 void MainWindow::Slot_FilesWidget_OnHDUActivated(const FileHDU& activatedHDU)
 {
-    auto pWorker = new LoadHDUDataWorker({activatedHDU});
+    // Look up the details of the HDU that was activated
+    const auto hdu = m_pVM->GetImportedFileHDU(activatedHDU.filePath, activatedHDU.hduIndex);
+    if (!hdu)
+    {
+        return;
+    }
 
-    auto pProgressDialog = new ProgressDialogWork(pWorker, ProgressDialogArgs{.isModal = true, .canBeCancelled = true}, this);
-    connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindow::Slot_OpenHDU_LoadHDUData_Complete);
+    //
+    // If the activated HDU has valid data, load and display it.
+    //
+    // Otherwise, just mark the HDU as activated; don't try to load and display its data.
+    // This will allow the user to "open" an empty HDU, for the Headers view to display its
+    // headers, but without trying to load its non-existent data.
+    //
+    if (hdu->ContainsAnyData())
+    {
+        LoadAndDisplayHDU(activatedHDU);
+    }
+    else
+    {
+        m_pVM->OnHDUActivated(activatedHDU);
+    }
 }
 
 void MainWindow::Slot_OnCompareImageHDUs(const std::vector<FileHDU>& compares)
@@ -188,7 +255,7 @@ void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
         {
             auto pImageData = std::unique_ptr<NFITS::ImageData>{dynamic_cast<NFITS::ImageData*>(pData.release())};
 
-            // If the loaded image has slices, open an ImageWidget to display them
+            // If the loaded image has valid image slices, open an ImageWidget to display them
             if (NFITS::GetNumSlicesInSpan(pImageData->GetImageSliceSpan()) > 0)
             {
                 const auto pImageWidget = new ImageWidget(
@@ -200,14 +267,20 @@ void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
                 auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
                 pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
                 pSubWindow->setWindowTitle(QString::fromStdString(std::format("{} - HDU {}", filePath.filename().string(), hduIndex)));
-                pSubWindow->show();
-            }
-            // Otherwise, if no slices, don't open a window; just mark the HDU as being activated. This
-            // supports the user activating empty primary HDUs and having the Headers view display its
-            // headers, without needing an empty MdiWidget opened for it.
-            else
-            {
-                m_pVM->OnHDUActivated(hdu);
+
+                // The first window opened is launched with showMaximized, and none others after that. This
+                // allows for maximizing the initial image, but then the mdi area will on its own decide whether
+                // to maximize/window further windows depending on how the user is interacting with windows
+                if (!m_initialWindowOpened)
+                {
+                    pSubWindow->showMaximized();
+                }
+                else
+                {
+                    pSubWindow->show();
+                }
+
+                m_initialWindowOpened = true;
             }
         }
         break;
@@ -343,6 +416,14 @@ void MainWindow::OnViewHeaders()
     addDockWidget(Qt::RightDockWidgetArea, dockWidget);
 
     m_pHeadersDockWidget = dockWidget;
+}
+
+void MainWindow::LoadAndDisplayHDU(const FileHDU& fileHDU)
+{
+    auto pWorker = new LoadHDUDataWorker({fileHDU});
+
+    auto pProgressDialog = new ProgressDialogWork(pWorker, ProgressDialogArgs{.isModal = true, .canBeCancelled = true}, this);
+    connect(pProgressDialog, &ProgressDialogWork::Signal_WorkFinished, this, &MainWindow::Slot_OpenHDU_LoadHDUData_Complete);
 }
 
 }

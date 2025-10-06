@@ -20,7 +20,7 @@ namespace Nastro
         std::pair<std::size_t, std::size_t> position;
         double physicalValue{0.0};
     };
-    
+
     class PixelDetailsWidget : public QWidget
     {
         Q_OBJECT

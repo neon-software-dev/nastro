@@ -92,6 +92,30 @@ namespace NFITS
         * size of the actual data.
         */
         uintmax_t dataByteSize{0};
+
+        /**
+         * @return Whether the HDU contains any data. There's valid scenarios where
+         * an HDU can be configured as an "empty" image with no data, with subsequent
+         * extensions HDUs containing the file's actual data.
+         */
+        [[nodiscard]] bool ContainsAnyData() const;
+
+        /**
+         * @return Whether the HDU contains any image data, whether via image or
+         * compressed bintable image data.
+         */
+        [[nodiscard]] bool ContainsAnyTypeOfImageData() const;
+
+        /**
+         * @return Whether the HDU contains a normal image, exclusing compressed
+         * bintable images.
+         */
+        [[nodiscard]] bool ContainsNormalImage() const;
+
+        /**
+         * @return Whether the HDU specifically contains compressed bintable image data.
+         */
+        [[nodiscard]] bool ContainsBinTableImage() const;
     };
 }
 

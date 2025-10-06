@@ -59,6 +59,9 @@ void FilesWidget::InitUI()
     m_pTreeView->sortByColumn(0, Qt::SortOrder::AscendingOrder);
     m_pTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_pTreeView->setSelectionBehavior(QAbstractItemView::SelectItems);
+    m_pTreeView->setItemsExpandable(false); // Don't allow expanding/collapsing
+    m_pTreeView->setExpandsOnDoubleClick(false); // Don't allow expanding/collapsing
+    m_pTreeView->setRootIsDecorated(false); // Hides expand/collapse option
     m_pTreeView->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     connect(m_pTreeView, &QAbstractItemView::activated, this, &FilesWidget::Slot_OnTreeView_Activated);
     connect(m_pTreeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FilesWidget::Slot_OnTreeViewModel_SelectionChanged);
@@ -73,14 +76,23 @@ void FilesWidget::InitUI()
 
 void FilesWidget::BindVM()
 {
-    connect(m_pMainWindowVM, &MainWindowVM::Signal_FilesImported, this, [this](const auto& addedFiles){
-        m_pTreeViewModel->AddFiles(addedFiles);
-    });
+    // When VM has imported new files, add them to this widget
+    connect(m_pMainWindowVM, &MainWindowVM::Signal_FilesImported, this, &FilesWidget::AddFiles);
 }
 
 void FilesWidget::InitialState()
 {
-    m_pTreeViewModel->AddFiles(m_pMainWindowVM->GetImportedFiles());
+    // Immediately add all files that the VM already has imported (if any)
+    AddFiles(m_pMainWindowVM->GetImportedFiles());
+}
+
+void FilesWidget::AddFiles(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& importedFiles)
+{
+    // Add the files to the model
+    m_pTreeViewModel->AddFiles(importedFiles);
+
+    // Force the treeview to expand its nodes
+    m_pTreeView->expandAll();
 }
 
 void FilesWidget::dragEnterEvent(QDragEnterEvent* pEvent)

@@ -81,7 +81,7 @@ namespace NFITS
         ScalingMode scalingMode{ScalingMode::PerImage};
 
         /** Scaling range for image transfer function to use */
-        ScalingRange scalingRange{ScalingRange::Full};
+        ScalingRange scalingRange{ScalingRange::p99};
 
         /** Scaling range min/max used for ScalingRange::Custom */
         std::optional<double> customScalingRangeMin;

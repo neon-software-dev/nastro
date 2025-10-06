@@ -9,9 +9,14 @@
 
 #include "../Util/Common.h"
 
+#include <NFITS/HDU.h>
+
 #include <QMainWindow>
 
 #include <filesystem>
+#include <optional>
+#include <vector>
+#include <unordered_map>
 
 class QDockWidget;
 class QVBoxLayout;
@@ -32,9 +37,11 @@ namespace Nastro
 
         public:
 
-            MainWindow();
+            explicit MainWindow(std::optional<std::filesystem::path> initialLaunchPath = std::nullopt);
 
         private slots:
+
+            void Slot_VM_FilesImported(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& files);
 
             void Slot_File_ImportFiles_ActionTriggered();
             void Slot_File_ImportDirectory_ActionTriggered();
@@ -59,7 +66,12 @@ namespace Nastro
             void OnViewFiles();
             void OnViewHeaders();
 
+            void LoadAndDisplayHDU(const FileHDU& fileHDU);
+
         private:
+
+            std::optional<std::filesystem::path> m_initialLaunchPath;
+            bool m_initialWindowOpened{false};
 
             std::unique_ptr<MainWindowVM> m_pVM;
 

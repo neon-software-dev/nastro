@@ -14,7 +14,7 @@ namespace NFITS
 
 std::expected<std::unique_ptr<Data>, Error> LoadHDUDataBlocking(const FITSFile* pFile, const HDU* pHDU)
 {
-    if (pHDU->type == HDU::Type::Image)
+    if (pHDU->ContainsNormalImage())
     {
         auto pData = LoadImageDataFromFileBlocking(pFile, pHDU);
         if (!pData)
@@ -23,7 +23,7 @@ std::expected<std::unique_ptr<Data>, Error> LoadHDUDataBlocking(const FITSFile* 
         }
         return pData;
     }
-    else if (pHDU->type == HDU::Type::BinTable && HDUContainsBinTableImage(*pHDU))
+    else if (pHDU->ContainsBinTableImage())
     {
         auto pData = LoadBinTableImageDataFromFileBlocking(pFile, pHDU);
         if (!pData)

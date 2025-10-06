@@ -32,28 +32,6 @@ struct HDUBinTableImageMetadata
     double zScale{1.0};
 };
 
-bool HDUContainsBinTableImage(const HDU& hdu)
-{
-    if (hdu.type != HDU::Type::BinTable)
-    {
-        return false;
-    }
-
-    const auto record = hdu.header.GetFirstKeywordRecord(KEYWORD_NAME_ZIMAGE);
-    if (!record)
-    {
-        return false;
-    }
-
-    const auto val = (*record)->GetKeywordValue_AsLogical();
-    if (!val)
-    {
-        return false;
-    }
-
-    return *val;
-}
-
 std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const HDU* pHDU)
 {
     //

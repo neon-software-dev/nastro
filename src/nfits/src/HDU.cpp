@@ -5,6 +5,8 @@
  */
  
 #include <NFITS/HDU.h>
+#include <NFITS/KeywordCommon.h>
+#include <NFITS/Data/BinTableImageData.h>
 
 namespace NFITS
 {
@@ -37,6 +39,48 @@ uintmax_t HDU::GetDataBlockCount() const
 uintmax_t HDU::GetDataByteSize() const
 {
     return dataByteSize;
+}
+
+bool HDU::ContainsAnyData() const
+{
+    return GetDataByteSize() > 0;
+}
+
+bool HDU::ContainsAnyTypeOfImageData() const
+{
+    return ContainsNormalImage() || ContainsBinTableImage();
+}
+
+bool HDU::ContainsNormalImage() const
+{
+    return ContainsAnyData() && type == HDU::Type::Image;
+}
+
+bool HDU::ContainsBinTableImage() const
+{
+    if (!ContainsAnyData())
+    {
+        return false;
+    }
+
+    if (type != HDU::Type::BinTable)
+    {
+        return false;
+    }
+
+    const auto record = header.GetFirstKeywordRecord(KEYWORD_NAME_ZIMAGE);
+    if (!record)
+    {
+        return false;
+    }
+
+    const auto val = (*record)->GetKeywordValue_AsLogical();
+    if (!val)
+    {
+        return false;
+    }
+
+    return *val;
 }
 
 }
