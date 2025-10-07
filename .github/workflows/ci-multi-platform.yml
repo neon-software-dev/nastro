@@ -62,30 +62,15 @@ jobs:
         -DBUILD_TESTING=OFF
         -S ${{ github.workspace }}/src
 
-    #- name: Build
-    #  run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
-    
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel --target package
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+    
+    #- name: Build
+    #  run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel --target package
       
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: nastroui-${{ runner.os }}
-        path: ${{ github.workspace }}/build/nastroui-*.zip
-
-    #- name: Execute windeployqt
-    #  if: runner.os == 'Windows'
-    #  run: |
-    #    $qt_tools_dir = "${{ github.workspace }}/external/vcpkg/installed/x64-windows/tools/Qt6" 
-    #    $app_executable = "${{ steps.strings.outputs.build-output-dir }}/nastroui/Release/nastroui.exe"
-    #    & "$qt_tools_dir/bin/windeployqt.exe" "$app_executable"
-
-    #- name: CMake install
-    #  run: cmake --install build --prefix install
-
     #- name: Upload artifacts
     #  uses: actions/upload-artifact@v4
     #  with:
     #    name: nastroui-${{ runner.os }}
-    #    path: install/
+    #    path: ${{ github.workspace }}/build/nastroui-*.zip
+
