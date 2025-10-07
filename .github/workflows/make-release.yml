@@ -1,0 +1,86 @@
+name: Make release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+
+jobs:
+  create-release:
+    runs-on: ${{ matrix.os }}
+    
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: true
+
+      matrix:
+        os: [windows-latest]
+        build_type: [Release]
+        c_compiler: [cl]
+        include:
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            preset: desktop-distro-windows
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/external/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('external/prepare_dependencies.py', 'external/internal/prepare_vcpkg.py') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
+    - name: Prepare dependencies
+      run: python prepare_dependencies.py
+      working-directory: ${{ github.workspace }}/external/
+
+    - name: CMake Configure
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        --preset ${{ matrix.preset }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/external/vcpkg/scripts/buildsystems/vcpkg.cmake
+        -DBUILD_SHARED_LIBS=OFF
+        -DBUILD_TESTING=OFF
+        -S ${{ github.workspace }}/src
+    
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel --target package
+    
+    - name: Create Git Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+          
+    - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          files: ${{ github.workspace }}/build/nastroui-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
