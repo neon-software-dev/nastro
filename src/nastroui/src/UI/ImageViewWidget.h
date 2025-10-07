@@ -47,6 +47,8 @@ namespace Nastro
             void resizeEvent(QResizeEvent* pEvent) override;
             void wheelEvent(QWheelEvent* pEvent) override;
             void mouseMoveEvent(QMouseEvent *event) override;
+            void mouseReleaseEvent(QMouseEvent *event) override;
+            void enterEvent(QEnterEvent *event) override;
             void leaveEvent(QEvent *event) override;
 
         private:

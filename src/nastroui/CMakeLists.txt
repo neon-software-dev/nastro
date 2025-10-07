@@ -65,6 +65,18 @@ if(WIN32)
 	)
 endif()
 
+# Qt deployment script to be executed at install time
+qt_generate_deploy_script(
+	TARGET nastroui
+	OUTPUT_SCRIPT qt_deploy_script
+	CONTENT "
+		qt_deploy_runtime_dependencies(
+			EXECUTABLE \"$<TARGET_FILE:nastroui>\"
+			GENERATE_QT_CONF
+			VERBOSE
+		)"
+)
+
 ####
 # Installation
 ####
@@ -76,6 +88,53 @@ install(
 )
 
 install(
-	FILES "licenses.txt"
+	FILES "nastroui_licenses.txt"
 	DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+install(
+	FILES $<TARGET_RUNTIME_DLLS:nastroui>
+	DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if (WIN32)
+	# On Windows, execute the qt deploy script which runs windeployqt, among other things
+	install(SCRIPT ${qt_deploy_script})
+
+	# On Windows, also manually install all vcpkg-installed runtime files
+	set(NASTRO_VCPKG_DIR "${CMAKE_SOURCE_DIR}/../external/vcpkg")
+
+	set(NASTRO_INSTALLED_DIR "${NASTRO_VCPKG_DIR}/installed/x64-windows/bin/")
+	if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+		set(NASTRO_INSTALLED_DIR "${NASTRO_VCPKG_DIR}/installed/x64-windows/debug/bin/")
+	endif()
+	
+	file(GLOB VCPKG_INSTALLED_RUNTIME "${NASTRO_INSTALLED_DIR}/*.dll")
+	install(FILES ${VCPKG_INSTALLED_RUNTIME} DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
+
+####
+# CPack
+####
+
+include(InstallRequiredSystemLibraries)
+
+set(CPACK_PACKAGE_NAME "nastroui")
+set(CPACK_PACKAGE_VENDOR "NEON Software")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Nastro FITS Viewer")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_CONTACT "none")
+
+# Default installation directory on Windows
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "nastroui")
+
+# What kind of packages to generate
+if(WIN32)
+	set(CPACK_GENERATOR "ZIP")
+elseif(APPLE)
+	set(CPACK_GENERATOR "DragNDrop")
+else()
+	set(CPACK_GENERATOR "TGZ")
+endif()
+
+include(CPack)

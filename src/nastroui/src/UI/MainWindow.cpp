@@ -84,7 +84,7 @@ void MainWindow::InitMenuBar()
 void MainWindow::InitWidgets()
 {
     //
-    // Main Widgets
+    // Main QMdiArea widget
     //
     m_pMdiArea = new QMdiArea(this);
     m_pMdiArea->setViewMode(QMdiArea::SubWindowView);
@@ -93,9 +93,10 @@ void MainWindow::InitWidgets()
     setCentralWidget(m_pMdiArea);
 
     //
-    // Open default widgets
+    // Open default/initial mdi widgets
     //
     OnViewFiles();
+    OnViewHeaders();
 }
 
 void MainWindow::BindVM()

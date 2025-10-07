@@ -62,8 +62,17 @@ jobs:
         -DBUILD_TESTING=OFF
         -S ${{ github.workspace }}/src
 
+    #- name: Build
+    #  run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+    
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel --target package
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nastroui-${{ runner.os }}
+        path: nastroui-*.zip
 
     #- name: Execute windeployqt
     #  if: runner.os == 'Windows'

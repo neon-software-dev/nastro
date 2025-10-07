@@ -19,7 +19,7 @@ ImageViewWidget::ImageViewWidget(QWidget* pParent)
     m_pScene = new QGraphicsScene(this);
     setScene(m_pScene);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-    setDragMode(QGraphicsView::ScrollHandDrag);
+    setDragMode(QGraphicsView::ScrollHandDrag); // Allow mouse dragging to pan
     setMouseTracking(true); // Allow mouse hover to generate mouseMoveEvents
 }
 
@@ -165,6 +165,24 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
     {
         emit Signal_OnImageViewPixelHovered(std::nullopt);
     }
+}
+
+void ImageViewWidget::mouseReleaseEvent(QMouseEvent* event)
+{
+    QGraphicsView::mouseReleaseEvent(event);
+
+    // When no longer interacting / dragging, change the cursor
+    // back to cross cursor (see: enterEvent)
+    viewport()->setCursor(Qt::CrossCursor);
+}
+
+void ImageViewWidget::enterEvent(QEnterEvent* event)
+{
+    QGraphicsView::enterEvent(event);
+
+    // Use the cross cursor when mouse is hovered over the widget, rather than
+    // the default hand cursor; easier to see which pixel is hovered
+    viewport()->setCursor(Qt::CrossCursor);
 }
 
 void ImageViewWidget::leaveEvent(QEvent* event)
