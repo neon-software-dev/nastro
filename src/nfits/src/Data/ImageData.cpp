@@ -25,6 +25,8 @@ struct HDUImageMetadata
     std::vector<int64_t> naxisns;
     double bZero{0.0};
     double bScale{1.0};
+    std::optional<int64_t> blank;
+    std::optional<std::string> bUnit;
     std::optional<double> dataMin;
     std::optional<double> dataMax;
 };
@@ -53,6 +55,8 @@ std::expected<HDUImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
     //
     const auto bZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BZERO);
     const auto bScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BSCALE);
+    const auto blank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BLANK);
+    const auto bUnit = pHDU->header.GetFirstKeywordRecord_AsString(KEYWORD_NAME_BUNIT);
     const auto dataMin = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMIN);
     const auto dataMax = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMAX);
 
@@ -61,6 +65,8 @@ std::expected<HDUImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
     metadata.naxisns = naxisns;
     if (bZero) { metadata.bZero = *bZero; }
     if (bScale) { metadata.bScale = *bScale; }
+    if (blank) { metadata.blank = *blank; }
+    if (bUnit) { metadata.bUnit = *bUnit; }
     if (dataMin) { metadata.dataMin = *dataMin; }
     if (dataMax) { metadata.dataMax = *dataMax; }
 
@@ -97,7 +103,11 @@ std::expected<std::vector<double>, Error> ReadDataAsPhysicalValues(const FITSFil
         const uintmax_t blockDataBytes = std::min(remainingDataBytes, BLOCK_BYTE_SIZE.value);
         const auto blockDataSpan = std::span<std::byte>(blockBytes.data(), blockDataBytes);
 
-        const auto blockPhysicalValues = RawImageDataToPhysicalValues(blockDataSpan, metadata.bitpix, metadata.bZero, metadata.bScale);
+        const auto blockPhysicalValues = RawImageDataToPhysicalValues(blockDataSpan,
+                                                                      metadata.bitpix,
+                                                                      metadata.bZero,
+                                                                      metadata.bScale,
+                                                                      metadata.blank);
         if (!blockPhysicalValues)
         {
             return std::unexpected(Error::Msg("Failed to convert data to physical values"));
@@ -154,15 +164,17 @@ std::expected<std::unique_ptr<ImageData>, Error> LoadImageDataFromFileBlocking(c
     //
     // Perform initial processing of the image's physical values
     //
-    return PhysicalValuesToImageData(std::move(*physicalValues), *sliceSpan);
+    return PhysicalValuesToImageData(std::move(*physicalValues), metadata->bUnit, *sliceSpan);
 }
 
 ImageData::ImageData(ImageSliceSpan sliceSpan,
                      std::vector<double> physicalValues,
+                     std::optional<std::string> physicalUnit,
                      std::vector<PhysicalStats> slicePhysicalStats,
                      std::vector<PhysicalStats> sliceCubePhysicalStats)
     : m_sliceSpan(std::move(sliceSpan))
     , m_physicalValues(std::move(physicalValues))
+    , m_physicalUnit(std::move(physicalUnit))
     , m_slicePhysicalStats(std::move(slicePhysicalStats))
     , m_sliceCubePhysicalStats(std::move(sliceCubePhysicalStats))
 {
@@ -235,7 +247,8 @@ std::optional<ImageSlice> ImageData::GetImageSlice(const ImageSliceKey& sliceKey
         .height = sliceHeight,
         .physicalStats = m_slicePhysicalStats.at(*sliceIndex),
         .cubePhysicalStats = m_sliceCubePhysicalStats.at(*sliceCubeIndex),
-        .physicalValues = slicePhysicalValues
+        .physicalValues = slicePhysicalValues,
+        .physicalUnit = m_physicalUnit
     };
 }
 

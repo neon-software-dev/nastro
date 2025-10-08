@@ -37,8 +37,9 @@ void PixelDetailsWidget::OnPixelChanged(const std::optional<PixelDetails>& pixel
                                                                   pixelDetails->position.first,
                                                                   pixelDetails->position.second)));
 
-        m_pPhysicalLabel->setText(QString::fromStdString(std::format("Physical: {:.4f}",
-                                                                     pixelDetails->physicalValue)));
+        const auto unitsStr = pixelDetails->physicalUnit ? *pixelDetails->physicalUnit : "Units";
+        const auto physicalText = std::format("Physical ({}): {:.4f}", unitsStr, pixelDetails->physicalValue);
+        m_pPhysicalLabel->setText(QString::fromStdString(physicalText));
     }
     else
     {

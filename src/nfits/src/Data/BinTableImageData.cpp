@@ -30,6 +30,7 @@ struct HDUBinTableImageMetadata
     std::vector<std::optional<int64_t>> zTilens;
     double zZero{0.0};
     double zScale{1.0};
+    std::optional<std::string> bUnit;
 };
 
 std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const HDU* pHDU)
@@ -91,6 +92,7 @@ std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const 
 
     const auto zScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZSCALE);
     const auto zZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZZERO);
+    const auto bUnit = pHDU->header.GetFirstKeywordRecord_AsString(KEYWORD_NAME_BUNIT);
 
     return HDUBinTableImageMetadata{
         .zCmpType = zCmpTypeValue,
@@ -98,7 +100,8 @@ std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const 
         .zNaxisns = zNaxisns,
         .zTilens = zTilens,
         .zZero = zZero ? *zZero : 0.0,
-        .zScale = zScale ? *zScale : 1.0
+        .zScale = zScale ? *zScale : 1.0,
+        .bUnit = bUnit ? *bUnit : std::optional<std::string>{}
     };
 }
 
@@ -337,7 +340,6 @@ std::expected<std::unique_ptr<BinTableImageData>, Error> LoadBinTableImageDataFr
     std::vector<double> physicalValues = *imageValues;
     ApplyPhysicalValueTransform(physicalValues, metadata->zZero, metadata->zScale);
     // TODO: Apply BZERO/BSCALE?
-
     // TODO! ZBLANK
 
     //
@@ -349,7 +351,7 @@ std::expected<std::unique_ptr<BinTableImageData>, Error> LoadBinTableImageDataFr
         return std::unexpected(sliceSpan.error());
     }
 
-    auto imageData = PhysicalValuesToImageData(std::move(physicalValues), *sliceSpan);
+    auto imageData = PhysicalValuesToImageData(std::move(physicalValues), metadata->bUnit, *sliceSpan);
     if (!imageData)
     {
         return std::unexpected(imageData.error());

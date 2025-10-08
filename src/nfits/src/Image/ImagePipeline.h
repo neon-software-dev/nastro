@@ -32,6 +32,7 @@ namespace NFITS
      * @param bitpix The bitpix of the raw data
      * @param bZero bZero to apply for the physical value transform
      * @param bScale bScale to apply for the physical value transform
+     * @param blank Optional value for undefined values, only relevant for integral bitpix values
      *
      * @return The resulting physical values, or Error on error
      */
@@ -39,7 +40,8 @@ namespace NFITS
         std::span<const std::byte> data,
         int64_t bitpix,
         double bZero,
-        double bScale
+        double bScale,
+        const std::optional<int64_t>& blank
     );
 
     /**
@@ -49,12 +51,15 @@ namespace NFITS
      * constructed from the data rather than copying it.
      *
      * @param physicalValues The physical values to be transformed
+     * @param physicalUnit Optional string describing the physical values' units
      * @param sliceSpan Defines the organization of image slices within the physical values
      *
      * @return An ImageData, or Error upon error
      */
     [[nodiscard]] std::expected<std::unique_ptr<ImageData>, Error>
-        PhysicalValuesToImageData(std::vector<double>&& physicalValues, const ImageSliceSpan& sliceSpan);
+        PhysicalValuesToImageData(std::vector<double>&& physicalValues,
+                                  const std::optional<std::string>& physicalUnit,
+                                  const ImageSliceSpan& sliceSpan);
 }
 
 #endif //NFITS_SRC_IMAGE_IMAGEPIPELINE_H

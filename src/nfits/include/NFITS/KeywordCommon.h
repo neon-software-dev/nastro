@@ -20,6 +20,8 @@ namespace NFITS
     static constexpr auto KEYWORD_NAME_GCOUNT = "GCOUNT";
     static constexpr auto KEYWORD_NAME_BZERO = "BZERO";
     static constexpr auto KEYWORD_NAME_BSCALE = "BSCALE";
+    static constexpr auto KEYWORD_NAME_BLANK = "BLANK";
+    static constexpr auto KEYWORD_NAME_BUNIT = "BUNIT";
     static constexpr auto KEYWORD_NAME_DATAMIN = "DATAMIN";
     static constexpr auto KEYWORD_NAME_DATAMAX = "DATAMAX";
     static constexpr auto KEYWORD_NAME_TFORM = "TFORM";

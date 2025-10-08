@@ -38,6 +38,16 @@ std::pair<double, double> ChoosePhysicalValueRange(const ImageRenderParams& para
     return {0.0, 0.0};
 }
 
+void OutputPixel(unsigned char* pScanline, uint64_t x, std::span<const unsigned char> pixelComponents)
+{
+    const auto scanlineOffset = x * pixelComponents.size();
+
+    for (unsigned int component = 0; component < pixelComponents.size(); ++component)
+    {
+        pScanline[scanlineOffset + component] = pixelComponents[component];
+    }
+}
+
 std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSlice, const ImageRenderParams& params)
 {
     //
@@ -68,6 +78,8 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
     //
     // Fill an ImageRender with interpreted image data
     //
+    const auto blankColor = std::array<unsigned char, 3>{0, 0, 0};
+
     auto imageRender = ImageRender(ImageRender::Format::RGB888, imageSlice.width, imageSlice.height);
 
     for (uint64_t y = 0; y < imageSlice.height; ++y)
@@ -80,8 +92,20 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
         {
             const auto physicalValueIndex = x + (y * imageSlice.width);
 
-            const double physicalValue = std::clamp(imageSlice.physicalValues[physicalValueIndex], physicalValueMin, physicalValueMax);
+            auto physicalValue = imageSlice.physicalValues[physicalValueIndex];
 
+            // If the physical value is nan, signifying a blank value, then output the
+            // blank color for the pixel and immediately continue to the next pixel
+            if (std::isnan(physicalValue))
+            {
+                OutputPixel(pScanline, x, blankColor);
+                continue;
+            }
+
+            // Otherwise, sanity check that physical value is within the expected range
+            physicalValue = std::clamp(physicalValue, physicalValueMin, physicalValueMax);
+
+            // Normalize the physical value
             double norm = (physicalValue - physicalValueMin) / physicalValueRange;
 
             // Force clamp norm to be within [0.0..1.0]. Shouldn't ever be outside this range though, unless
@@ -170,12 +194,9 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
             }
 
             //
-            // Write final pixel components to the image render
+            // Output the final pixel color
             //
-            for (unsigned int component = 0; component < rgbColors.size(); ++component)
-            {
-                pScanline[(x * 3) + component] = rgbColors[component];
-            }
+            OutputPixel(pScanline, x, rgbColors);
         }
     }
 

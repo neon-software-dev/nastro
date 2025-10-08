@@ -28,7 +28,36 @@ void ApplyPhysicalValueTransform(std::vector<double>& values, double zero, doubl
 
 ////
 
-template<typename DataType>
+template<std::integral DataType>
+std::vector<double> RawValuesToDoubles(std::span<const std::byte> data, const std::optional<int64_t>& blank)
+{
+    // Interpret the data as its underlying data type
+    const auto typedData = std::span<const DataType>(
+        reinterpret_cast<const DataType*>(data.data()),
+        data.size() / sizeof(DataType)
+    );
+
+    std::vector<double> values;
+    values.reserve(typedData.size());
+
+    std::ranges::transform(typedData, std::back_inserter(values), [&](auto val){
+        // Convert raw value to the endianness for this machine as needed
+        FixEndiannessPacked(val);
+
+        // Integral values have an optional "blank" value. If matched, return nan
+        if (blank && (val == *blank))
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+
+        // Interpret the raw value as a double
+        return static_cast<double>(val);
+    });
+
+    return values;
+}
+
+template<std::floating_point DataType>
 std::vector<double> RawValuesToDoubles(std::span<const std::byte> data)
 {
     // Interpret the data as its underlying data type
@@ -40,9 +69,11 @@ std::vector<double> RawValuesToDoubles(std::span<const std::byte> data)
     std::vector<double> values;
     values.reserve(typedData.size());
 
-    // Fix the endianness of each value and convert it to a double
-    std::ranges::transform(typedData, std::back_inserter(values), [](auto val){
+    std::ranges::transform(typedData, std::back_inserter(values), [&](auto val){
+        // Convert raw value to the endianness for this machine as needed
         FixEndiannessPacked(val);
+
+        // Interpret the raw value as a double
         return static_cast<double>(val);
     });
 
@@ -52,16 +83,17 @@ std::vector<double> RawValuesToDoubles(std::span<const std::byte> data)
 std::expected<std::vector<double>, Error> RawImageDataToPhysicalValues(std::span<const std::byte> data,
                                                                        int64_t bitpix,
                                                                        double bZero,
-                                                                       double bScale)
+                                                                       double bScale,
+                                                                       const std::optional<int64_t>& blank)
 {
     // Convert the raw data to doubles
     std::vector<double> values;
 
     switch (bitpix)
     {
-        case 8:     values = RawValuesToDoubles<uint8_t>(data); break;
-        case 16:    values = RawValuesToDoubles<int16_t>(data); break;
-        case 32:    values = RawValuesToDoubles<int32_t>(data); break;
+        case 8:     values = RawValuesToDoubles<uint8_t>(data, blank); break;
+        case 16:    values = RawValuesToDoubles<int16_t>(data, blank); break;
+        case 32:    values = RawValuesToDoubles<int32_t>(data, blank); break;
         case -32:   values = RawValuesToDoubles<float>(data); break;
         case -64:   values = RawValuesToDoubles<double>(data); break;
         default:
@@ -70,10 +102,8 @@ std::expected<std::vector<double>, Error> RawImageDataToPhysicalValues(std::span
         }
     }
 
-    // Apply the physical transform
+    // Apply transform to convert from raw values to physical values
     ApplyPhysicalValueTransform(values, bZero, bScale);
-
-    // TODO! BLANK
 
     return values;
 }
@@ -126,7 +156,9 @@ inline std::span<const double> GetSliceCubeDataSpan(const ImageSliceSpan& sliceS
 }
 
 std::expected<std::unique_ptr<ImageData>, Error>
-PhysicalValuesToImageData(std::vector<double>&& physicalValues, const ImageSliceSpan& sliceSpan)
+PhysicalValuesToImageData(std::vector<double>&& physicalValues,
+                          const std::optional<std::string>& physicalUnit,
+                          const ImageSliceSpan& sliceSpan)
 {
     if (sliceSpan.size() < 2)
     {
@@ -168,6 +200,7 @@ PhysicalValuesToImageData(std::vector<double>&& physicalValues, const ImageSlice
     return std::make_unique<ImageData>(
         sliceSpan,
         std::move(physicalValues),
+        physicalUnit,
         std::move(slicePhysicalStats),
         std::move(sliceCubePhysicalStats)
     );

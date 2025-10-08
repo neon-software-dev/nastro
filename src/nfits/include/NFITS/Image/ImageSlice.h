@@ -45,9 +45,10 @@ namespace NFITS
     {
         uint64_t width{0};
         uint64_t height{0};
-        PhysicalStats physicalStats{};          // Physical stats compiled from the specific image slice
-        PhysicalStats cubePhysicalStats{};      // Physical stats compiled from the slice cube the slice is contained within
-        std::span<const double> physicalValues; // Physical values for the image slice
+        PhysicalStats physicalStats{};              // Physical stats compiled from the specific image slice
+        PhysicalStats cubePhysicalStats{};          // Physical stats compiled from the slice cube the slice is contained within
+        std::span<const double> physicalValues;     // Physical values for the image slice
+        std::optional<std::string> physicalUnit;    // String describing the physical values unit
     };
 
     /**

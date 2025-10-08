@@ -10,6 +10,8 @@
 #include <QWidget>
 
 #include <utility>
+#include <optional>
+#include <string>
 
 class QLabel;
 
@@ -19,6 +21,7 @@ namespace Nastro
     {
         std::pair<std::size_t, std::size_t> position;
         double physicalValue{0.0};
+        std::optional<std::string> physicalUnit;
     };
 
     class PixelDetailsWidget : public QWidget

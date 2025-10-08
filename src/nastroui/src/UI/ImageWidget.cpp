@@ -350,7 +350,8 @@ void ImageWidget::Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional
 
     m_pPixelDetailsWidget->OnPixelChanged(PixelDetails{
         .position = *pixelPos,
-        .physicalValue = imageSlice->physicalValues[dataIndex]
+        .physicalValue = imageSlice->physicalValues[dataIndex],
+        .physicalUnit = imageSlice->physicalUnit
     });
 }
 
