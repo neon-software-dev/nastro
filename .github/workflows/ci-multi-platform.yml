@@ -67,7 +67,7 @@ jobs:
     
     - name: Test NFITS
       run: ctest --output-on-failure
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}/nfits/
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}/${{ matrix.build_type }}/nfits/
     
     #- name: Build
     #  run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel --target package
