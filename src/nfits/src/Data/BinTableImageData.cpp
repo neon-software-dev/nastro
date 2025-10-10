@@ -28,9 +28,14 @@ struct HDUBinTableImageMetadata
     int64_t zBitpix;
     std::vector<int64_t> zNaxisns;
     std::vector<std::optional<int64_t>> zTilens;
-    double zZero{0.0};
-    double zScale{1.0};
+    std::optional<double> zZero;
+    std::optional<double> zScale;
+    std::optional<int64_t> zBlank;
+
     std::optional<std::string> bUnit;
+    std::optional<int64_t> blank;
+    std::optional<double> bZero;
+    std::optional<double> bScale;
 };
 
 std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const HDU* pHDU)
@@ -92,16 +97,24 @@ std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const 
 
     const auto zScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZSCALE);
     const auto zZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZZERO);
+    const auto zBlank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZBLANK);
     const auto bUnit = pHDU->header.GetFirstKeywordRecord_AsString(KEYWORD_NAME_BUNIT);
+    const auto blank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BLANK);
+    const auto bScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BSCALE);
+    const auto bZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BZERO);
 
     return HDUBinTableImageMetadata{
         .zCmpType = zCmpTypeValue,
         .zBitpix = zBitpixValue,
         .zNaxisns = zNaxisns,
         .zTilens = zTilens,
-        .zZero = zZero ? *zZero : 0.0,
-        .zScale = zScale ? *zScale : 1.0,
-        .bUnit = bUnit ? *bUnit : std::optional<std::string>{}
+        .zZero = zZero ? *zZero : std::optional<double>{},
+        .zScale = zScale ? *zScale : std::optional<double>{},
+        .zBlank = zBlank ? *zBlank : std::optional<int64_t>{},
+        .bUnit = bUnit ? *bUnit : std::optional<std::string>{},
+        .blank = blank ? *blank : std::optional<int64_t>{},
+        .bZero = bZero ? *bZero : std::optional<double>{},
+        .bScale = bScale ? *bScale : std::optional<double>{},
     };
 }
 
@@ -151,7 +164,7 @@ std::expected<std::vector<double>, Error> Decompress_Rice1(const HDU* pHDU,
     assert(metadata.zNaxisns.size() == metadata.zTilens.size());
 
     //
-    // Parse tile size
+    // Fetch tile size
     //
 
     // Default to ZNAXIS1 value
@@ -162,7 +175,7 @@ std::expected<std::vector<double>, Error> Decompress_Rice1(const HDU* pHDU,
     if (zTilen) { tileSize = static_cast<std::size_t>(*zTilen); }
 
     //
-    // Parse blocksize and bytepix from ZVALS
+    // Fetch blocksize and bytepix from ZVALS
     //
     const auto blockSize = GetZVal<int64_t>("BLOCKSIZE", pHDU);
     if (!blockSize) { return std::unexpected(Error::Msg("Missing or bad BLOCKSIZE ZVAL")); }
@@ -171,11 +184,17 @@ std::expected<std::vector<double>, Error> Decompress_Rice1(const HDU* pHDU,
     if (!bytepix) { return std::unexpected(Error::Msg("Missing or bad BYTEPIX ZVAL")); }
 
     //
+    // Determine optional blank value. Prefer blank over zblank.
+    //
+    std::optional<int64_t> blank = metadata.blank;
+    if (!blank) { blank = metadata.zBlank; }
+
+    //
     // Decode data
     //
     RiceCodec rice(static_cast<unsigned int>(*blockSize));
 
-    auto output = rice.Decompress(*bytepix, compressed, tileSize);
+    auto output = rice.Decompress(*bytepix, compressed, tileSize, blank);
     if (!output)
     {
         return std::unexpected(output.error());
@@ -328,19 +347,29 @@ std::expected<std::unique_ptr<BinTableImageData>, Error> LoadBinTableImageDataFr
     //
     // Read the image data from the bintable and uncompress it
     //
-    const auto imageValues = ReadBinTableUncompressedImageData(pHDU, binTableData->get(), *metadata);
+    auto imageValues = ReadBinTableUncompressedImageData(pHDU, binTableData->get(), *metadata);
     if (!imageValues)
     {
         return std::unexpected(imageValues.error());
     }
 
+    std::vector<double> physicalValues = std::move(*imageValues);
+
     //
     // Convert raw array values to physical values
     //
-    std::vector<double> physicalValues = *imageValues;
-    ApplyPhysicalValueTransform(physicalValues, metadata->zZero, metadata->zScale);
-    // TODO: Apply BZERO/BSCALE?
-    // TODO! ZBLANK
+
+    // Optional transform from floating point to integers
+    if (metadata->zZero &&  metadata->zScale)
+    {
+        ApplyPhysicalValueTransform(physicalValues, *metadata->zZero, *metadata->zScale);
+    }
+
+    // Optional transform from integers to physical values
+    if (metadata->bZero &&  metadata->bScale)
+    {
+        ApplyPhysicalValueTransform(physicalValues, *metadata->bZero, *metadata->bScale);
+    }
 
     //
     // Create an ImageData from the physical values

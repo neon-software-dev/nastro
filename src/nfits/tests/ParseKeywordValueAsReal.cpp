@@ -19,7 +19,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -33,7 +33,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoFractional)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -47,7 +47,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoFractional_WithPlus)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -61,7 +61,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoFractional_WithMinus)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -75,7 +75,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_BasicFractional)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -89,7 +89,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_BasicFractional_WithPlus)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -103,7 +103,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_BasicFractional_WithMinus)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -117,7 +117,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_DecimalButNoFractional)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -131,7 +131,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_E_PlusSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -145,7 +145,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_E_MinusSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -159,7 +159,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_D_PlusSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -173,7 +173,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_D_MinusSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -187,7 +187,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_E_NoSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -201,7 +201,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_D_NoSign)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -215,7 +215,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoDigits)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -228,7 +228,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoDigitsAfterE)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -241,7 +241,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_NoDigitsAfterD)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -254,7 +254,7 @@ TEST(ParseKeywordValueAsReal, FixedFormat_BadChars)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -267,7 +267,7 @@ TEST(ParseKeywordValueAsReal, FreeFormat_WithComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -281,7 +281,7 @@ TEST(ParseKeywordValueAsReal, FreeFormat_NoComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsReal(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);

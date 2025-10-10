@@ -35,6 +35,7 @@ namespace NFITS
     static constexpr auto KEYWORD_NAME_ZTILE = "ZTILE";
     static constexpr auto KEYWORD_NAME_ZSCALE = "ZSCALE";
     static constexpr auto KEYWORD_NAME_ZZERO = "ZZERO";
+    static constexpr auto KEYWORD_NAME_ZBLANK = "ZBLANK";
     static constexpr auto KEYWORD_NAME_ZNAME = "ZNAME";
     static constexpr auto KEYWORD_NAME_ZVAL = "ZVAL";
 

@@ -23,7 +23,7 @@ namespace Nastro
 
             explicit ImageRenderToolbar(QWidget* pParent = nullptr);
 
-            [[nodiscard]] const NFITS::ImageRenderParams& GetImageRenderParams() const noexcept { return m_imageRenderParams; }
+            [[nodiscard]] NFITS::ImageRenderParams GetImageRenderParams() const;
 
             void SetScalingRange(NFITS::ScalingRange scalingRange);
 
@@ -49,14 +49,16 @@ namespace Nastro
             template <typename T>
             void UpdateImageRenderParam(T& target, const T& newValue)
             {
-                const bool changed = target != newValue;
-                target = newValue;
-                if (changed) { emit Signal_OnImageRenderParamsChanged(m_imageRenderParams); }
+                if (target != newValue)
+                {
+                    target = newValue;
+                    emit Signal_OnImageRenderParamsChanged(GetImageRenderParams());
+                }
             }
 
         private:
 
-            NFITS::ImageRenderParams m_imageRenderParams{};
+            NFITS::ImageRenderParams m_baseRenderParams{};
     };
 }
 

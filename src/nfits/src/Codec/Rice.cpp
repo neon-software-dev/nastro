@@ -8,6 +8,7 @@
 
 #include <ranges>
 #include <algorithm>
+#include <cassert>
 
 namespace NFITS
 {
@@ -100,26 +101,15 @@ RiceCodec::RiceCodec(unsigned int blockSize)
 
 std::expected<std::vector<double>, Error> RiceCodec::Decompress(int64_t bytepix,
                                                                 std::span<const std::byte> compressed,
-                                                                std::size_t outputSize) const
+                                                                std::size_t outputSize,
+                                                                std::optional<int64_t> blank) const
 {
     std::vector<double> output;
     output.reserve(outputSize);
 
     switch (bytepix)
     {
-        case 4:
-        {
-            const auto decompressed = Decompress_32(compressed, outputSize);
-            if (!decompressed)
-            {
-                return std::unexpected(decompressed.error());
-            }
-
-            std::ranges::transform(*decompressed, std::back_inserter(output), [](const auto& val){
-                return static_cast<double>(val);
-            });
-        }
-        break;
+        case 4: { return Decompress_32(compressed, outputSize, blank); }
 
         default:
         {
@@ -127,19 +117,24 @@ std::expected<std::vector<double>, Error> RiceCodec::Decompress(int64_t bytepix,
         }
     }
 
+    assert(false);
     return output;
 }
 
-std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<const std::byte> compressed,
-                                                                     std::size_t outputSize) const
+std::expected<std::vector<double>, Error> RiceCodec::Decompress_32(std::span<const std::byte> compressed,
+                                                                   std::size_t outputSize,
+                                                                   std::optional<int64_t> blank) const
 {
+    //
+    // Decompress input bytes
+    //
     const auto inputChars = std::span<const unsigned char>{
         reinterpret_cast<const unsigned char*>(compressed.data()),
         compressed.size()
     };
 
-    std::vector<uint32_t> output;
-    output.resize(outputSize);
+    std::vector<uint32_t> decompressed;
+    decompressed.resize(outputSize);
 
     std::size_t i, imax;
     int k;
@@ -148,7 +143,6 @@ std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<c
     unsigned char bytevalue;
     unsigned int b, diff, lastpix;
     int fsmax, fsbits, bbits;
-    extern const int nonzero_count[];
 
     const int clen = static_cast<int>(compressed.size());
     fsbits = 5;
@@ -208,7 +202,7 @@ std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<c
         {
             for ( ; i<imax; i++)
             {
-                output[i] = lastpix;
+                decompressed[i] = lastpix;
             }
         }
         /* high-entropy case, directly coded pixel values */
@@ -249,8 +243,8 @@ std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<c
                     diff = ~(diff >> 1);
                 }
 
-                output[i] = diff+lastpix;
-                lastpix = output[i];
+                decompressed[i] = diff+lastpix;
+                lastpix = decompressed[i];
             }
         }
         /* normal case, Rice coding */
@@ -287,8 +281,8 @@ std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<c
                 {
                     diff = ~(diff >> 1);
                 }
-                output[i] = diff+lastpix;
-                lastpix = output[i];
+                decompressed[i] = diff+lastpix;
+                lastpix = decompressed[i];
             }
         }
 
@@ -302,6 +296,23 @@ std::expected<std::vector<uint32_t>, Error> RiceCodec::Decompress_32(std::span<c
     {
         return std::unexpected(Error::Msg("decompression warning: unused bytes at end of compressed buffer"));
     }
+
+    //
+    // Convert decompressed values to doubles
+    //
+    std::vector<double> output;
+    output.reserve(decompressed.size());
+
+    std::ranges::transform(decompressed, std::back_inserter(output), [&](const auto& val){
+        // Transform blank values to nan
+        if (blank && (*blank == val))
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+
+        // Otherwise just directly cast the decompressed value to a double
+        return static_cast<double>(val);
+    });
 
     return output;
 }

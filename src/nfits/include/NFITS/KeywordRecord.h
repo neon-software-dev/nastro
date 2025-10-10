@@ -44,11 +44,6 @@ namespace NFITS
             [[nodiscard]] std::expected<std::optional<std::string>, Error> GetKeywordName() const;
 
             /**
-             * @return Whether the keyword record has a keyword name which is a FITS mandatory keyword name
-             */
-            [[nodiscard]] bool IsMandatoryKeywordName() const;
-
-            /**
              * @return Whether the keyword record has the '= ' characters indicating the record contains a value
              */
             [[nodiscard]] bool HasValueIndicator() const;

@@ -12,6 +12,7 @@
 #include <optional>
 #include <vector>
 #include <utility>
+#include <array>
 
 namespace NFITS
 {
@@ -98,6 +99,9 @@ namespace NFITS
 
         /** Whether to invert the final image pixel colors */
         bool invertColors{false};
+
+        /** Color to apply to blank pixels, default: black */
+        std::array<unsigned char, 3> blankColor{0};
     };
 }
 

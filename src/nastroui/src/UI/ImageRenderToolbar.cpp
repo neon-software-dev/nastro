@@ -6,6 +6,8 @@
  
 #include "ImageRenderToolbar.h"
 
+#include "../Settings.h"
+
 #include <QToolButton>
 #include <QLabel>
 #include <QComboBox>
@@ -48,17 +50,17 @@ void ImageRenderToolbar::InitUI()
 
 void ImageRenderToolbar::SetScalingRange(NFITS::ScalingRange scalingRange)
 {
-    UpdateImageRenderParam(m_imageRenderParams.scalingRange, scalingRange);
+    UpdateImageRenderParam(m_baseRenderParams.scalingRange, scalingRange);
 }
 
 void ImageRenderToolbar::SetCustomScalingRangeMin(const std::optional<double>& value)
 {
-    SetCustomScalingRangeVal(m_imageRenderParams.customScalingRangeMin, value);
+    SetCustomScalingRangeVal(m_baseRenderParams.customScalingRangeMin, value);
 }
 
 void ImageRenderToolbar::SetCustomScalingRangeMax(const std::optional<double>& value)
 {
-    SetCustomScalingRangeVal(m_imageRenderParams.customScalingRangeMax, value);
+    SetCustomScalingRangeVal(m_baseRenderParams.customScalingRangeMax, value);
 }
 
 void ImageRenderToolbar::SetCustomScalingRangeVal(std::optional<double>& target, const std::optional<double>& value)
@@ -67,7 +69,7 @@ void ImageRenderToolbar::SetCustomScalingRangeVal(std::optional<double>& target,
     if ((target && !value) || (!target && value))
     {
         target = value;
-        emit Signal_OnImageRenderParamsChanged(m_imageRenderParams);
+        emit Signal_OnImageRenderParamsChanged(m_baseRenderParams);
         return;
     }
 
@@ -79,7 +81,7 @@ void ImageRenderToolbar::SetCustomScalingRangeVal(std::optional<double>& target,
     }
 
     target = value;
-    emit Signal_OnImageRenderParamsChanged(m_imageRenderParams);
+    emit Signal_OnImageRenderParamsChanged(m_baseRenderParams);
 }
 
 WidgetProducer ImageRenderToolbar::GetInvertWidgetProducer()
@@ -94,7 +96,7 @@ WidgetProducer ImageRenderToolbar::GetInvertWidgetProducer()
 
         // Respond to the widget being set to a new value
         connect(pInvertButton, &QToolButton::toggled, pInvertButton, [=,this](bool checked){
-            UpdateImageRenderParam(m_imageRenderParams.invertColors, checked);
+            UpdateImageRenderParam(m_baseRenderParams.invertColors, checked);
         });
 
         // Sync the widget to the latest parameter state
@@ -103,7 +105,7 @@ WidgetProducer ImageRenderToolbar::GetInvertWidgetProducer()
             pInvertButton->setChecked(imageRenderParams.invertColors);
         });
 
-        pInvertButton->setChecked(m_imageRenderParams.invertColors);
+        pInvertButton->setChecked(m_baseRenderParams.invertColors);
 
         return pInvertButton;
     };
@@ -146,7 +148,7 @@ WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
         connect(transferFuncMenu, &QMenu::triggered, pTransferFuncButton, [=,this](QAction* pAction){
             pTransferFuncButton->setText(pAction->text());
 
-            UpdateImageRenderParam(m_imageRenderParams.transferFunction, transferFuncStrToTransferFunc.at(pAction->text()));
+            UpdateImageRenderParam(m_baseRenderParams.transferFunction, transferFuncStrToTransferFunc.at(pAction->text()));
         });
 
         // Sync the widget to the latest parameter state
@@ -156,7 +158,7 @@ WidgetProducer ImageRenderToolbar::GetTransferFunctionWidgetProducer()
         });
 
         // Display the initial parameter state
-        transferFuncToAction.at(m_imageRenderParams.transferFunction)->trigger();
+        transferFuncToAction.at(m_baseRenderParams.transferFunction)->trigger();
 
         return pTransferFuncButton;
     };
@@ -275,7 +277,7 @@ WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
         connect(pColorMapMenu, &QMenu::triggered, pColorMapButton, [=,this](QAction* pAction){
             pColorMapButton->setText(pAction->text());
 
-            UpdateImageRenderParam(m_imageRenderParams.colorMap, colorMapStrToColorMap.at(pAction->text()));
+            UpdateImageRenderParam(m_baseRenderParams.colorMap, colorMapStrToColorMap.at(pAction->text()));
         });
 
         // Sync the widget to the latest parameter state
@@ -285,7 +287,7 @@ WidgetProducer ImageRenderToolbar::GetColorMapWidgetProducer()
         });
 
         // Display the initial parameter state
-        colorMapToAction.at(m_imageRenderParams.colorMap)->trigger();
+        colorMapToAction.at(m_baseRenderParams.colorMap)->trigger();
 
         return pColorMapButton;
     };
@@ -325,7 +327,7 @@ WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
         connect(scalingModeMenu, &QMenu::triggered, pScalingModeButton, [=,this](QAction* pAction){
             pScalingModeButton->setText(pAction->text());
 
-            UpdateImageRenderParam(m_imageRenderParams.scalingMode, scalingModeStrToScalingMode.at(pAction->text()));
+            UpdateImageRenderParam(m_baseRenderParams.scalingMode, scalingModeStrToScalingMode.at(pAction->text()));
         });
 
         // Sync the widget to the latest parameter state
@@ -335,7 +337,7 @@ WidgetProducer ImageRenderToolbar::GetScalingModeWidgetProducer()
         });
 
         // Display the initial parameter state
-        scalingModeToAction.at(m_imageRenderParams.scalingMode)->trigger();
+        scalingModeToAction.at(m_baseRenderParams.scalingMode)->trigger();
 
         return pScalingModeButton;
     };
@@ -377,7 +379,7 @@ WidgetProducer ImageRenderToolbar::GetScalingRangeWidgetProducer()
         connect(scalingRangeMenu, &QMenu::triggered, pScalingRangeButton, [=,this](QAction* pAction){
             pScalingRangeButton->setText(pAction->text());
 
-            UpdateImageRenderParam(m_imageRenderParams.scalingRange, scalingRangeStrToScalingRange.at(pAction->text()));
+            UpdateImageRenderParam(m_baseRenderParams.scalingRange, scalingRangeStrToScalingRange.at(pAction->text()));
         });
 
         // Sync the widget to the latest parameter state
@@ -387,10 +389,24 @@ WidgetProducer ImageRenderToolbar::GetScalingRangeWidgetProducer()
         });
 
         // Display the initial parameter state
-        scalingRangeToAction.at(m_imageRenderParams.scalingRange)->trigger();
+        scalingRangeToAction.at(m_baseRenderParams.scalingRange)->trigger();
 
         return pScalingRangeButton;
     };
+}
+
+NFITS::ImageRenderParams ImageRenderToolbar::GetImageRenderParams() const
+{
+    // Base parameters that come from this widget
+    auto params = m_baseRenderParams;
+
+    // Other parameters that are external to this widget
+    const auto blankColor = SafeGetSetting<QColor>(QSettings(), SETTINGS_RENDERING_BLANK_COLOR, DEFAULT_BLANK_COLOR);
+    params.blankColor[0] = static_cast<unsigned char>(blankColor.red());
+    params.blankColor[1] = static_cast<unsigned char>(blankColor.green());
+    params.blankColor[2] = static_cast<unsigned char>(blankColor.blue());
+
+    return params;
 }
 
 }

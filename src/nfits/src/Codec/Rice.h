@@ -13,6 +13,7 @@
 #include <expected>
 #include <vector>
 #include <cstdint>
+#include <optional>
 
 namespace NFITS
 {
@@ -37,11 +38,13 @@ namespace NFITS
             [[nodiscard]] std::expected<std::vector<double>, Error> Decompress(
                 int64_t bytepix,
                 std::span<const std::byte> compressed,
-                std::size_t outputSize) const;
+                std::size_t outputSize,
+                std::optional<int64_t> blank) const;
 
-            [[nodiscard]] std::expected<std::vector<uint32_t>, Error> Decompress_32(
+            [[nodiscard]] std::expected<std::vector<double>, Error> Decompress_32(
                 std::span<const std::byte> compressed,
-                std::size_t outputSize) const;
+                std::size_t outputSize,
+                std::optional<int64_t> blank) const;
 
         private:
 

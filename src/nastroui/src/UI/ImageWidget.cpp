@@ -180,7 +180,7 @@ void ImageWidget::RebuildImageView(const NFITS::ImageRenderParams& params)
         return;
     }
 
-    auto imageView = NFITS::ImageView::From(*imageSlice, params);
+    auto imageView = NFITS::ImageView::Render(*imageSlice, params);
     if (imageView)
     {
         m_pImageViewWidget->SetImageView(*imageView);

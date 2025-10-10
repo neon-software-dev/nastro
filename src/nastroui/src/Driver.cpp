@@ -40,6 +40,10 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
 
+    QApplication::setOrganizationName("NEON");
+    //QApplication::setOrganizationDomain("todo.com");
+    QApplication::setApplicationName("nastroui");
+
     QIcon appIcon(":/images/nastro_icon_transparent_1024.png");
 
     const auto args = ParseArgs(argc, argv);

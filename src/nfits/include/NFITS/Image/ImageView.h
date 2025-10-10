@@ -26,7 +26,7 @@ namespace NFITS
     {
         public:
 
-            [[nodiscard]] static std::expected<ImageView, bool> From(const ImageSlice& imageSlice, const ImageRenderParams& params);
+            [[nodiscard]] static std::expected<ImageView, bool> Render(const ImageSlice& imageSlice, const ImageRenderParams& params);
 
             [[nodiscard]] const ImageRender& GetImageRender() const noexcept { return m_imageRender; }
 

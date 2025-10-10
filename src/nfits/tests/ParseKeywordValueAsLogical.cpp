@@ -19,7 +19,7 @@ TEST(ParseKeywordValueAsLogical, FixedFormat_T_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -33,7 +33,7 @@ TEST(ParseKeywordValueAsLogical, FixedFormat_F_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -47,20 +47,7 @@ TEST(ParseKeywordValueAsLogical, FixedFormat_BadChar)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), true);
-
-    // Assert
-    ASSERT_FALSE(result);
-}
-
-TEST(ParseKeywordValueAsLogical, FixedFormat_WrongPosChar)
-{
-    // Setup
-    const std::string keywordRecord = "KEYWORD =               T                                                       ";
-    ASSERT_EQ(keywordRecord.length(), 80);
-
-    // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -73,7 +60,7 @@ TEST(ParseKeywordValueAsLogical, FixedFormat_WithComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -87,7 +74,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_T_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -101,7 +88,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_F_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -115,7 +102,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_WithComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -129,7 +116,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_MoreThanOneChar)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -143,7 +130,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_BadCharBeforeLogicalChar)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -156,7 +143,7 @@ TEST(ParseKeywordValueAsLogical, FreeFormat_WrongDataType)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsLogical(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);

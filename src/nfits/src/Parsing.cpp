@@ -236,26 +236,8 @@ std::expected<int64_t, Error> ParseValue_AsInteger(std::span<const char> valueSp
     }
 }
 
-std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan)
 {
-    /**
-     * [4.2.3]
-     * "If the value is a fixed-format integer, the ASCII representation
-     * shall be right-justified in Bytes 11 through 30.
-     */
-    if (isFixedFormat)
-    {
-        const auto valueSpan = keywordRecordSpan.subspan<10, 20>();
-
-        // Require right-justified
-        if (valueSpan[valueSpan.size() - 1] == ' ')
-        {
-            return std::unexpected(Error::Msg("ParseKeywordValue_AsInteger: Fixed format is not right-justified"));
-        }
-
-        return ParseValue_AsInteger(valueSpan);
-    }
-
     /**
      * [4.2.3]
      * "A free-format integer value follows the same rules as fixed-
@@ -404,27 +386,8 @@ std::expected<double, Error> ParseValue_AsReal(std::span<const char> valueSpan)
     }
 }
 
-std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan)
 {
-    /**
-     * [4.2.4]
-     * If the value is a fixed-format real floating-point number, the
-     * ASCII representation shall be right-justified in Bytes 11 through
-     * 30.
-     */
-    if (isFixedFormat)
-    {
-        const auto valueSpan = keywordRecordSpan.subspan<10, 20>();
-
-        // Require right-justified; no space at the end
-        if (IsSpaceChar(valueSpan.last(1)[0]))
-        {
-            return std::unexpected(Error::Msg("ParseKeywordValue_AsReal: Fixed format is not right-justified"));
-        }
-
-        return ParseValue_AsReal(valueSpan);
-    }
-
     /**
      * [4.2.4.]
      * A free-format floating-point value follows the same rules as
@@ -445,34 +408,22 @@ std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keyword
     }
 }
 
-std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan)
 {
     std::optional<char> logicalChar;
 
-    /**
-     * [4.2.2.]
-     * If the value is a fixed-format logical constant, it shall appear as
-     * an upper-case T or F in Byte 30.
-     */
-    if (isFixedFormat)
-    {
-        logicalChar = keywordRecordSpan[29];
-    }
     /**
     * [4.2.2.]
     * A logical value is represented
     * in free-format by a single character consisting of an upper-case
     * T or F as the first non-space character in Bytes 11 through 80.
     */
-    else
-    {
-        const auto valueSpan = keywordRecordSpan.subspan(10, 70);
+    const auto valueSpan = keywordRecordSpan.subspan(10, 70);
 
-        const auto it = std::ranges::find_if(valueSpan, [](const char& c) { return !IsSpaceChar(c); });
-        if (it != valueSpan.end())
-        {
-            logicalChar = *it;
-        }
+    const auto it = std::ranges::find_if(valueSpan, [](const char& c) { return !IsSpaceChar(c); });
+    if (it != valueSpan.end())
+    {
+        logicalChar = *it;
     }
 
     if (!logicalChar)
@@ -493,7 +444,7 @@ std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywor
     }
 }
 
-std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat)
+std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan)
 {
     const auto commentStartIndex = FindCommentStartIndex(keywordRecordSpan);
 
@@ -505,52 +456,35 @@ std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan 
     //
     std::size_t startQuotePos = 0;
 
-    if (isFixedFormat)
-    {
-        /**
-         * [4.2.1]
-         * If the value is a fixed-format character string, the starting
-         * single-quote character must be in Byte 11 of the keyword record
-         */
-        if (keywordRecordSpan[10] != '\'')
-        {
-            return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Fixed format string doesn't have starting quote in pos 10"));
-        }
+    /**
+     * [4.2.1]
+     * Free-format character strings follow the same rules as fixed-
+     * format character strings except that the starting single-quote
+     * character may occur after Byte 11. Any bytes preceding the start-
+     * ing quote character and after Byte 10 must contain the space
+     * character.
+     */
+    bool foundStartQuotePos = false;
 
-        startQuotePos = 10;
+    for (std::size_t pos = 10; pos < stringSearchEndPos; ++pos)
+    {
+        const char& c = keywordRecordSpan[pos];
+
+        if (c == '\'')
+        {
+            startQuotePos = pos;
+            foundStartQuotePos = true;
+            break;
+        }
+        else if (!IsSpaceChar(c))
+        {
+            return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Non-space character found before start quote"));
+        }
     }
-    else
+
+    if (!foundStartQuotePos)
     {
-        /**
-         * [4.2.1]
-         * Free-format character strings follow the same rules as fixed-
-         * format character strings except that the starting single-quote
-         * character may occur after Byte 11. Any bytes preceding the start-
-         * ing quote character and after Byte 10 must contain the space
-         * character.
-         */
-        bool foundStartQuotePos = false;
-
-        for (std::size_t pos = 10; pos < stringSearchEndPos; ++pos)
-        {
-            const char& c = keywordRecordSpan[pos];
-
-            if (c == '\'')
-            {
-                startQuotePos = pos;
-                foundStartQuotePos = true;
-                break;
-            }
-            else if (!IsSpaceChar(c))
-            {
-                return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Non-space character found before start quote"));
-            }
-        }
-
-        if (!foundStartQuotePos)
-        {
-            return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Free format string, no start quote found"));
-        }
+        return std::unexpected(Error::Msg("ParseKeywordValue_AsString: Free format string, no start quote found"));
     }
 
     //

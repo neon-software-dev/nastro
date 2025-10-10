@@ -63,7 +63,7 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
 
     if (!physicalStats)
     {
-        std::cerr << "RenderImageData: Failed to determine slice physical stats" << std::endl;
+        std::cerr << "PhysicalValuesToImage: Failed to determine slice physical stats" << std::endl;
         return std::unexpected(false);
     }
 
@@ -78,8 +78,6 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
     //
     // Fill an ImageRender with interpreted image data
     //
-    const auto blankColor = std::array<unsigned char, 3>{0, 0, 0};
-
     auto imageRender = ImageRender(ImageRender::Format::RGB888, imageSlice.width, imageSlice.height);
 
     for (uint64_t y = 0; y < imageSlice.height; ++y)
@@ -98,7 +96,7 @@ std::expected<ImageRender, bool> PhysicalValuesToImage(const ImageSlice& imageSl
             // blank color for the pixel and immediately continue to the next pixel
             if (std::isnan(physicalValue))
             {
-                OutputPixel(pScanline, x, blankColor);
+                OutputPixel(pScanline, x, params.blankColor);
                 continue;
             }
 
@@ -242,7 +240,7 @@ std::expected<ImageRender, bool> RenderImageData(const ImageSlice& imageSlice, c
     return sliceImage;
 }
 
-std::expected<ImageView, bool> ImageView::From(const ImageSlice& imageSlice, const ImageRenderParams& params)
+std::expected<ImageView, bool> ImageView::Render(const ImageSlice& imageSlice, const ImageRenderParams& params)
 {
     //
     // Render the image data

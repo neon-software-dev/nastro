@@ -9,6 +9,7 @@
 #include "HeadersWidget.h"
 #include "ImageWidget.h"
 #include "NastroDockWidget.h"
+#include "SettingsDialog.h"
 
 #include "../VM/MainWindowVM.h"
 
@@ -64,6 +65,9 @@ void MainWindow::InitMenuBar()
 
         auto pImportDirectoryAction = pFileMenu->addAction(tr("Import &Directory"));
         connect(pImportDirectoryAction, &QAction::triggered, this, &MainWindow::Slot_File_ImportDirectory_ActionTriggered);
+
+        auto pSettingsAction = pFileMenu->addAction(tr("&Settings"));
+        connect(pSettingsAction, &QAction::triggered, this, &MainWindow::Slot_File_Settings_ActionTriggered);
 
         auto pExitAction = pFileMenu->addAction(tr("&Exit"));
         connect(pExitAction, &QAction::triggered, this, &MainWindow::Slot_File_Exit_ActionTriggered);
@@ -185,6 +189,12 @@ void MainWindow::Slot_File_ImportDirectory_ActionTriggered()
     {
         m_pVM->OnImportDirectory(std::filesystem::path(qDirectoryName.toStdString()));
     }
+}
+
+void MainWindow::Slot_File_Settings_ActionTriggered()
+{
+    auto pSettingsDialog = new SettingsDialog(this);
+    pSettingsDialog->open();
 }
 
 void MainWindow::Slot_File_Exit_ActionTriggered()

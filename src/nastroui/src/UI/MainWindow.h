@@ -45,10 +45,11 @@ namespace Nastro
 
             void Slot_File_ImportFiles_ActionTriggered();
             void Slot_File_ImportDirectory_ActionTriggered();
+            void Slot_File_Settings_ActionTriggered();
             void Slot_File_Exit_ActionTriggered();
 
-            void Slot_FilesWidget_OnHDUActivated(const FileHDU& activatedHDU);
-            void Slot_OnCompareImageHDUs(const std::vector<FileHDU>& compares);
+            void Slot_FilesWidget_OnHDUActivated(const Nastro::FileHDU& activatedHDU);
+            void Slot_OnCompareImageHDUs(const std::vector<Nastro::FileHDU>& compares);
 
             void Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker);
             void Slot_CompareHDUs_LoadHDUData_Complete(Nastro::Worker* pWorker);

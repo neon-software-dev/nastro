@@ -44,22 +44,22 @@ namespace NFITS
     /**
      * Parses a keyword value as an integer value
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<int64_t, Error> ParseKeywordValue_AsInteger(KeywordRecordCSpan keywordRecordSpan);
 
     /**
      * Parses a keyword value as a real
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<double, Error> ParseKeywordValue_AsReal(KeywordRecordCSpan keywordRecordSpan);
 
     /**
      * Parses a keyword value as a logical
      */
-    [[nodiscard]] NFITS_PUBLIC std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<bool, Error> ParseKeywordValue_AsLogical(KeywordRecordCSpan keywordRecordSpan);
 
     /**
     * Parses a keyword value as a string
     */
-    [[nodiscard]] NFITS_PUBLIC std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan, bool isFixedFormat);
+    [[nodiscard]] NFITS_PUBLIC std::expected<std::string, Error> ParseKeywordValue_AsString(KeywordRecordCSpan keywordRecordSpan);
 
     /**
      * Parses a binary table TFORMN keyword value

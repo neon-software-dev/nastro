@@ -19,7 +19,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -33,7 +33,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_WithComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -47,7 +47,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_EscapedChar)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -61,7 +61,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_EscapedCharAtEnd)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -75,24 +75,11 @@ TEST(ParseKeywordValueAsString, FixedFormat_MaxLength)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
     EXPECT_EQ(*result, "ABCD                                                               E");
-}
-
-TEST(ParseKeywordValueAsString, FixedFormat_WithFreeFormatStartPos)
-{
-    // Setup
-    const std::string keywordRecord = "KEYWORD =           'ABCD'                                                      ";
-    ASSERT_EQ(keywordRecord.length(), 80);
-
-    // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
-
-    // Assert
-    ASSERT_FALSE(result);
 }
 
 TEST(ParseKeywordValueAsString, FixedFormat_NullString)
@@ -102,7 +89,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_NullString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -116,7 +103,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_EmptyString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -130,7 +117,7 @@ TEST(ParseKeywordValueAsString, FixedFormat_NotAString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), true);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
@@ -143,7 +130,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_SameAsFixed)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -157,7 +144,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_HappyPath)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -171,7 +158,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_WithComment)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -185,7 +172,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_EscapedChar)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -199,7 +186,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_CloseAtEnd)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -213,7 +200,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_FullSize)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -227,7 +214,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_NullString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -241,7 +228,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_EmptyString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_TRUE(result);
@@ -255,7 +242,7 @@ TEST(ParseKeywordValueAsString, FreeFormat_NotAString)
     ASSERT_EQ(keywordRecord.length(), 80);
 
     // Act
-    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord), false);
+    const auto result = ParseKeywordValue_AsString(KeywordRecordCSpan(keywordRecord));
 
     // Assert
     ASSERT_FALSE(result);
