@@ -13,8 +13,11 @@
 #include "ImageRenderToolbar.h"
 #include "PixelDetailsWidget.h"
 
+#include "../VM/MainWindowVM.h"
+
 #include <NFITS/Data/ImageData.h>
 #include <NFITS/Util/ImageUtil.h>
+#include <NFITS/Image/FlattenedImageSliceSource.h>
 
 #include <QToolBar>
 #include <QLabel>
@@ -29,9 +32,14 @@
 namespace Nastro
 {
 
-ImageWidget::ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource, std::optional<FileHDU> associatedHDU, QWidget* pParent)
+ImageWidget::ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource,
+                         MainWindowVM* pMainWindowVM,
+                         std::optional<FileHDU> associatedHDU,
+                         QWidget* pParent)
     : MdiWidget(std::move(associatedHDU), pParent)
     , m_pImageSliceSource(std::move(pImageSliceSource))
+    , m_pMainWindowVM(pMainWindowVM)
+    , m_imageSliceKey(NFITS::GetDefaultSliceKey(m_pImageSliceSource->GetImageSliceSpan()))
 {
     InitUI();
 }
@@ -61,9 +69,9 @@ void ImageWidget::InitUI()
     const auto sliceSpan = m_pImageSliceSource->GetImageSliceSpan();
 
     // Append axis selection toolbars for every slice axis past the first two
-    for (std::size_t x = 2; x < sliceSpan.size(); ++x)
+    for (std::size_t x = 2; x < sliceSpan.axes.size(); ++x)
     {
-        const auto& axisSpan = sliceSpan.at(x);
+        const auto& axisSpan = sliceSpan.axes.at(x);
 
         // Don't provide a selection widget for an axis unless it has a size > 1; nothing to select otherwise
         if (axisSpan <= 1)
@@ -85,7 +93,7 @@ void ImageWidget::InitUI()
         }
 
         connect(pAxisWidget, &AxisWidget::Signal_ValueChanged, [=, this](int val) {
-            m_imageSliceKey.insert_or_assign(static_cast<unsigned int>(x + 1), val);
+            m_imageSliceKey.axesValues.at(x - 2) = val;
 
             const auto scalingPerImage = m_pImageRenderToolbar->GetImageRenderParams().scalingMode == NFITS::ScalingMode::PerImage;
 
@@ -183,7 +191,7 @@ void ImageWidget::RebuildImageView(const NFITS::ImageRenderParams& params)
     auto imageView = NFITS::ImageView::Render(*imageSlice, params);
     if (imageView)
     {
-        m_pImageViewWidget->SetImageView(*imageView);
+        m_pImageViewWidget->SetImageView(std::move(*imageView));
     }
 
     m_pErrorWidget->setVisible(!imageView.has_value());
@@ -326,33 +334,90 @@ void ImageWidget::Slot_Histogram_MaxVertLineChanged(double physicalValue, bool f
     m_pImageRenderToolbar->SetCustomScalingRangeMax(physicalValue);
 }
 
-void ImageWidget::Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos)
+void ImageWidget::Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<double, double>>& pixelCoord)
 {
-    if (!pixelPos)
+    // Handle nothing hovered / error determining pixel that's hovered
+    if (!pixelCoord)
     {
-        m_pPixelDetailsWidget->OnPixelChanged(std::nullopt);
+        OnNewHoveredPixelDetails(std::nullopt);
         return;
     }
 
+    // Fetch the image slice currently being displayed
     const auto imageSlice = m_pImageSliceSource->GetImageSlice(m_imageSliceKey);
     if (!imageSlice)
     {
-        m_pPixelDetailsWidget->OnPixelChanged(std::nullopt);
+        OnNewHoveredPixelDetails(std::nullopt);
         return;
     }
+    const auto imageSliceSpan = m_pImageSliceSource->GetImageSliceSpan();
+    const auto imageSliceWidth = static_cast<uintmax_t>(imageSliceSpan.axes.at(0));
 
-    const auto pixelX = pixelPos->first;
-    const auto pixelY = pixelPos->second;
-    const auto sliceWidth = m_pImageSliceSource->GetImageSliceSpan().at(0);
+    // Determine (zero-based) data index of the pixel being hovered, within its slice.
+    // Subtracting 0.5 and flooring to convert to zero-based.
+    const auto dataPos = std::pair<std::size_t, std::size_t>(
+        static_cast<std::size_t>(std::floor(pixelCoord->first - 0.5f)),
+        static_cast<std::size_t>(std::floor(pixelCoord->second - 0.5f))
+    );
+    const auto dataX = dataPos.first;
+    const auto dataY = dataPos.second;
+    const auto dataIndex = (dataY * imageSliceWidth) + dataX;
 
-    const auto dataIndex = (pixelY * sliceWidth) + pixelX;
     assert(dataIndex < imageSlice->physicalValues.size());
 
-    m_pPixelDetailsWidget->OnPixelChanged(PixelDetails{
-        .position = *pixelPos,
+    // Determine the fully dimensioned local pixel coordinate by combining the 2D pixel
+    // coordinate with the rest of the axes selections from the active slice key.
+    auto localPixelCoord = std::vector<double>{pixelCoord->first, pixelCoord->second};
+
+    auto localSliceKey = m_imageSliceKey;
+
+    // If displaying a FlattenedImageSliceSource, then m_imageSliceKey is in "flattened"/"global" slice
+    // span space. WCS logic below requires the full pixel coordinate to be in local slice space, so we
+    // need to special case ask the flattened source for the original local key.
+    auto *pFlattenedSource = dynamic_cast<NFITS::FlattenedImageSliceSource*>(m_pImageSliceSource.get());
+    if (pFlattenedSource != nullptr)
+    {
+        // Get the local slice key
+        const auto localKey = pFlattenedSource->GetLocalKey(m_imageSliceKey);
+        if (!localKey) { return; }
+
+        localSliceKey = *localKey;
+    }
+
+    // Append slice key axes selection values to the local pixel coordinate
+    for (const auto& axisValue : localSliceKey.axesValues)
+    {
+        localPixelCoord.push_back(static_cast<double>(axisValue));
+    }
+
+    std::vector<NFITS::WCSWorldCoord> wcsCoords;
+
+    if (imageSlice->wcsParams)
+    {
+        const auto wcsCoordsExpect = NFITS::PixelCoordToWorldCoords(localPixelCoord, *imageSlice->wcsParams);
+        if (wcsCoordsExpect)
+        {
+            wcsCoords = *wcsCoordsExpect;
+        }
+    }
+
+    OnNewHoveredPixelDetails(PixelDetails{
+        .pixelCoordinate = localPixelCoord,
         .physicalValue = imageSlice->physicalValues[dataIndex],
-        .physicalUnit = imageSlice->physicalUnit
+        .physicalUnit = imageSlice->physicalUnit,
+        .wcsCoords = wcsCoords
     });
+}
+
+void ImageWidget::OnNewHoveredPixelDetails(const std::optional<PixelDetails>& pixelDetails)
+{
+    // Manually update our internal pixel details widget to display pixel coord/value. We do
+    // this manually to handle multiple window case; we only want the one, relevant, pixel
+    // details widget to display that information
+    m_pPixelDetailsWidget->DisplayPixelDetails(pixelDetails);
+
+    // Report to the main VM that a new pixel is hovered
+    m_pMainWindowVM->OnPixelHovered(pixelDetails);
 }
 
 }

@@ -74,7 +74,7 @@ bool HDU::ContainsBinTableImage() const
         return false;
     }
 
-    const auto val = (*record)->GetKeywordValue_AsLogical();
+    const auto val = record->GetKeywordValue_AsLogical();
     if (!val)
     {
         return false;

@@ -20,14 +20,15 @@ ImageViewWidget::ImageViewWidget(QWidget* pParent)
     setScene(m_pScene);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
     setDragMode(QGraphicsView::ScrollHandDrag); // Allow mouse dragging to pan
+    setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setMouseTracking(true); // Allow mouse hover to generate mouseMoveEvents
 }
 
 ImageViewWidget::~ImageViewWidget() = default;
 
-void ImageViewWidget::SetImageView(const NFITS::ImageView& imageView)
+void ImageViewWidget::SetImageView(NFITS::ImageView imageView)
 {
-    m_imageView = imageView;
+    m_imageView = std::move(imageView);
 
     RebuildScene();
 }
@@ -141,25 +142,29 @@ void ImageViewWidget::mouseMoveEvent(QMouseEvent* event)
 
     if (m_pPixmapItem == nullptr) { return; }
 
+    const auto pixmap = m_pPixmapItem->pixmap();
+
     const auto viewPos = event->pos();
     const auto scenePos = mapToScene(viewPos);
-    const auto itemPos = m_pPixmapItem->mapFromScene(scenePos);
+    const auto pixmapPoint = m_pPixmapItem->mapFromScene(scenePos);
 
-    // Using floor to get pixelPos rather than itemPos.toPoint() so
-    // that pixel pos stays constant over the full area of a pixel,
-    // only changing at boundaries between pixels
-    auto pixelPos = QPoint(
-        static_cast<int>(std::floor(itemPos.x())),
-        static_cast<int>(std::floor(itemPos.y()))
-    );
-
-    const auto pixmap = m_pPixmapItem->pixmap();
-    if (pixmap.rect().contains(pixelPos))
+    // Only care about hovered points that are within the pixmap's area.
+    //
+    // The check that y is > 0.0 is because Qt has an inclusive 0.0 = top and
+    // when we invert y below we need an exclusive rather than inclusive max y
+    // value.
+    if (QRectF(pixmap.rect()).contains(pixmapPoint) && (pixmapPoint.y() > 0.0))
     {
-        // Invert y-coordinates as Qt uses top-left as origin whereas FITS uses bottom-left
-        pixelPos.setY(pixmap.height() - pixelPos.y() - 1);
+        auto pixelCoord = std::make_pair(pixmapPoint.x(), pixmapPoint.y());
 
-        emit Signal_OnImageViewPixelHovered(std::make_pair(pixelPos.x(), pixelPos.y()));
+        // Invert y as Qt uses top-left as origin whereas FITS standard uses bottom-left
+        pixelCoord.second = static_cast<qreal>(pixmap.height()) - pixelCoord.second;
+
+        // Add 0.5f to the coordinate as FITS standard considers (1,1) as the center of the first pixel
+        pixelCoord.first += 0.5;
+        pixelCoord.second += 0.5;
+
+        emit Signal_OnImageViewPixelHovered(pixelCoord);
     }
     else
     {

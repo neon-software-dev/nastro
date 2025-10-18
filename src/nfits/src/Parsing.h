@@ -9,9 +9,11 @@
 
 #include <NFITS/Def.h>
 #include <NFITS/Error.h>
-#include <NFITS/KeywordRecord.h>
 #include <NFITS/SharedLib.h>
+#include <NFITS/KeywordRecord.h>
 #include <NFITS/Data/BinTableData.h>
+
+#include "WCS/WCSInternal.h"
 
 #include <expected>
 #include <optional>
@@ -65,6 +67,38 @@ namespace NFITS
      * Parses a binary table TFORMN keyword value
      */
     [[nodiscard]] NFITS_PUBLIC std::expected<BinFieldForm, Error> ParseBinTable_TFORMN(const std::string& tformn);
+
+    /**
+     * Parses a WCS keyword name with form BASENAMEa
+     */
+    [[nodiscard]] NFITS_PUBLIC std::optional<WCSKeywordName> ParseWCSKeywordName_a(const std::string& keywordName,
+                                                                                   const std::string& baseName);
+
+    /**
+     * Parses a WCS keyword name with form BASENAMEia
+     */
+    [[nodiscard]] NFITS_PUBLIC std::optional<WCSKeywordName> ParseWCSKeywordName_ia(const std::string& keywordName,
+                                                                                    const std::string& baseName);
+
+    /**
+     * Parses a WCS keyword name with form BASENAMEja
+     */
+    [[nodiscard]] NFITS_PUBLIC std::optional<WCSKeywordName> ParseWCSKeywordName_ja(const std::string& keywordName,
+                                                                                    const std::string& baseName);
+
+    /**
+     * Parses a WCS keyword name with form BASENAMEi
+     */
+    [[nodiscard]] NFITS_PUBLIC std::optional<WCSKeywordName> ParseWCSKeywordName_i(const std::string& keywordName,
+                                                                                   const std::string& baseName);
+
+    /**
+     * Parses a WCS keyword name with form BASENAMEi_ja
+     */
+    [[nodiscard]] NFITS_PUBLIC std::optional<WCSKeywordName> ParseWCSKeywordName_i_ja(const std::string& keywordName,
+                                                                                      const std::string& baseName);
+
+    [[nodiscard]] NFITS_PUBLIC std::expected<WCSCType, Error> ParseWCSCType(const std::string& ctype);
 }
 
 #endif //NFITS_SRC_PARSING_H

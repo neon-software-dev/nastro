@@ -43,7 +43,7 @@ namespace Nastro
 
             [[nodiscard]] virtual std::optional<FileHDU> GetAssociatedHDU() const noexcept { return m_associatedHDU; };
 
-        private:
+        protected:
 
             std::optional<FileHDU> m_associatedHDU;
     };

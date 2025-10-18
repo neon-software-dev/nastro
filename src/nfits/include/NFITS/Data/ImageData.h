@@ -13,6 +13,7 @@
 #include "../Error.h"
 
 #include "../Image/ImageSliceSource.h"
+#include "../WCS/WCSParams.h"
 
 #include <unordered_map>
 #include <cstdint>
@@ -36,9 +37,10 @@ namespace NFITS
 
             ImageData(ImageSliceSpan sliceSpan,
                       std::vector<double> physicalValues,
-                      std::optional<std::string> physicalUnit,
                       std::vector<PhysicalStats> slicePhysicalStats,
-                      std::vector<PhysicalStats> sliceCubePhysicalStats);
+                      std::vector<PhysicalStats> sliceCubePhysicalStats,
+                      std::optional<std::string> physicalUnit,
+                      std::optional<WCSParams> wcsParams);
 
             ImageData(ImageData&& other) = default;
 
@@ -64,9 +66,10 @@ namespace NFITS
 
             ImageSliceSpan m_sliceSpan;
             std::vector<double> m_physicalValues;
-            std::optional<std::string> m_physicalUnit;
             std::vector<PhysicalStats> m_slicePhysicalStats;
             std::vector<PhysicalStats> m_sliceCubePhysicalStats;
+            std::optional<std::string> m_physicalUnit;
+            std::optional<WCSParams> m_wcsParams;
     };
 
     [[nodiscard]] NFITS_PUBLIC std::expected<std::unique_ptr<ImageData>, Error>

@@ -7,6 +7,10 @@
 #ifndef NASTROUI_SRC_UI_PIXELDETAILSWIDGET_H
 #define NASTROUI_SRC_UI_PIXELDETAILSWIDGET_H
 
+#include "../Util/Common.h"
+
+#include <NFITS/WCS/WCSParams.h>
+
 #include <QWidget>
 
 #include <utility>
@@ -14,16 +18,10 @@
 #include <string>
 
 class QLabel;
+class QHBoxLayout;
 
 namespace Nastro
 {
-    struct PixelDetails
-    {
-        std::pair<std::size_t, std::size_t> position;
-        double physicalValue{0.0};
-        std::optional<std::string> physicalUnit;
-    };
-
     class PixelDetailsWidget : public QWidget
     {
         Q_OBJECT
@@ -32,12 +30,18 @@ namespace Nastro
 
             explicit PixelDetailsWidget(QWidget* pParent = nullptr);
 
-            void OnPixelChanged(const std::optional<PixelDetails>& pixelDetails);
+            void DisplayPixelDetails(const std::optional<PixelDetails>& pixelDetails);
 
         private:
 
-            QLabel* m_pCoordLabel;
-            QLabel* m_pPhysicalLabel;
+            void InitUI();
+
+        private:
+
+            QHBoxLayout* m_pMainLayout{nullptr};
+
+            QLabel* m_pCoordLabel{nullptr};
+            QLabel* m_pPhysicalLabel{nullptr};
     };
 }
 

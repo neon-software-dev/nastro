@@ -54,11 +54,17 @@ namespace NFITS
              */
             [[nodiscard]] std::expected<int64_t, Error> GetKeywordValue_AsInteger() const;
 
+            template<std::same_as<int64_t> T>
+            [[nodiscard]] std::expected<T, Error> GetKeywordValue() const { return GetKeywordValue_AsInteger(); }
+
             /**
              * @return The keyword's value as a real, or std::unexpected if an error occurred (e.g. the keyword
              * doesn't have a value, or the value isn't a real)
              */
             [[nodiscard]] std::expected<double, Error> GetKeywordValue_AsReal() const;
+
+            template<std::same_as<double> T>
+            [[nodiscard]] std::expected<T, Error> GetKeywordValue() const { return GetKeywordValue_AsReal(); }
 
             /**
              * @return The keyword's value as a logical, or std::unexpected if an error occurred (e.g. the keyword
@@ -66,11 +72,17 @@ namespace NFITS
              */
             [[nodiscard]] std::expected<bool, Error> GetKeywordValue_AsLogical() const;
 
+            template<std::same_as<bool> T>
+            [[nodiscard]] std::expected<T, Error> GetKeywordValue() const { return GetKeywordValue_AsLogical(); }
+
             /**
              * @return The keyword's value as a string, or std::unexpected if an error occurred (e.g. the keyword
              * doesn't have a value, or the value isn't a string)
              */
             [[nodiscard]] std::expected<std::string, Error> GetKeywordValue_AsString() const;
+
+            template<std::same_as<std::string> T>
+            [[nodiscard]] std::expected<T, Error> GetKeywordValue() const { return GetKeywordValue_AsString(); }
 
             /**
              * @return A validation error associated with the keyword record, or std::nullopt if there's no issue

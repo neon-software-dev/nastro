@@ -93,6 +93,12 @@ void MainWindowVM::OnHDUActivated(const std::optional<FileHDU>& activatedHDU)
     UpdateAndEmit(m_activatedHDU, activatedHDU, this, &MainWindowVM::Signal_OnActivatedHDUChanged);
 }
 
+void MainWindowVM::OnPixelHovered(const std::optional<PixelDetails>& pixelDetails)
+{
+    m_hoveredPixelDetails = pixelDetails;
+    emit Signal_OnPixelHoveredChanged(m_hoveredPixelDetails);
+}
+
 void MainWindowVM::Slot_ImportFiles_WorkFinished(Worker* pWorker)
 {
     const auto& importedFiles = dynamic_cast<ImportFilesWorker*>(pWorker)->GetResult();

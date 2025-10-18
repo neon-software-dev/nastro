@@ -28,6 +28,14 @@ namespace NFITS
                 std::vector<std::unique_ptr<ImageSliceSource>> sources
             );
 
+        public:
+
+            /**
+             * Converts a (global) slice key for this source into the original, local, slice key
+             * from the corresponding original ImageSliceSource.
+             */
+            [[nodiscard]] std::optional<ImageSliceKey> GetLocalKey(const ImageSliceKey& sliceKey);
+
             //
             // ImageSliceSource
             //
@@ -44,6 +52,13 @@ namespace NFITS
                                       std::vector<std::unique_ptr<ImageSliceSource>> sources,
                                       ImageSliceSpan globalSpan,
                                       PhysicalStats globalPhysicalStats);
+
+        private:
+
+            /**
+             * @return (local slice key, local source) from a given global slice key (or std::nullopt if not exists)
+             */
+            [[nodiscard]] std::optional<std::pair<ImageSliceKey, ImageSliceSource*>> GetLocalSource(const ImageSliceKey& sliceKey) const;
 
         private:
 

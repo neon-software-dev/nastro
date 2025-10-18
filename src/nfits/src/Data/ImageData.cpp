@@ -12,6 +12,7 @@
 
 #include "../Util/ImageUtilInternal.h"
 #include "../Image/ImagePipeline.h"
+#include "../WCS/WCSInternal.h"
 
 #include <iostream>
 #include <numeric>
@@ -22,6 +23,7 @@ namespace NFITS
 struct HDUImageMetadata
 {
     int64_t bitpix{0};
+    int64_t naxis{0};
     std::vector<int64_t> naxisns;
     double bZero{0.0};
     double bScale{1.0};
@@ -31,22 +33,23 @@ struct HDUImageMetadata
     std::optional<double> dataMax;
 };
 
-std::expected<HDUImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
+std::expected<HDUImageMetadata, Error> ParseImageMetadata(const HDU* pHDU)
 {
     //
     // Required keywords
     //
     const auto bitpix = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BITPIX);
-    if (!bitpix) { return std::unexpected(false); }
+    if (!bitpix) { return std::unexpected(Error::Msg("Required keyword missing: BITPIX")); }
 
     const auto naxis = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_NAXIS);
-    if (!naxis) { return std::unexpected(false); }
+    if (!naxis) { return std::unexpected(Error::Msg("Required keyword missing: NAXIS")); }
 
     std::vector<int64_t> naxisns;
     for (int64_t n = 1; n <= *naxis; ++n)
     {
-        const auto naxisn = pHDU->header.GetFirstKeywordRecord_AsInteger(std::format("NAXIS{}", n));
-        if (!naxisn) { return std::unexpected(false); }
+        const auto naxisnStr = std::format("NAXIS{}", n);
+        const auto naxisn = pHDU->header.GetFirstKeywordRecord_AsInteger(naxisnStr);
+        if (!naxisn) { return std::unexpected(Error::Msg("Required keyword missing: {}", naxisnStr)); }
         naxisns.push_back(*naxisn);
     }
 
@@ -55,13 +58,14 @@ std::expected<HDUImageMetadata, bool> ParseImageMetadata(const HDU* pHDU)
     //
     const auto bZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BZERO);
     const auto bScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BSCALE);
-    const auto blank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BLANK);
+    const auto blank = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BLANK);
     const auto bUnit = pHDU->header.GetFirstKeywordRecord_AsString(KEYWORD_NAME_BUNIT);
     const auto dataMin = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMIN);
     const auto dataMax = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_DATAMAX);
 
     auto metadata = HDUImageMetadata{};
     metadata.bitpix = *bitpix;
+    metadata.naxis = *naxis;
     metadata.naxisns = naxisns;
     if (bZero) { metadata.bZero = *bZero; }
     if (bScale) { metadata.bScale = *bScale; }
@@ -137,10 +141,16 @@ std::expected<std::unique_ptr<ImageData>, Error> LoadImageDataFromFileBlocking(c
     //
     // Read metadata about the image from the HDU
     //
-    auto metadata = ParseImageMetadata(pHDU);
+    const auto metadata = ParseImageMetadata(pHDU);
     if (!metadata)
     {
-        return std::unexpected(Error::Msg("Failed to parse image metadata"));
+        return std::unexpected(metadata.error());
+    }
+
+    const auto wcsParams = ParseWCSParams(pHDU, metadata->naxis);
+    if (!wcsParams)
+    {
+        return std::unexpected(wcsParams.error());
     }
 
     //
@@ -162,21 +172,33 @@ std::expected<std::unique_ptr<ImageData>, Error> LoadImageDataFromFileBlocking(c
     }
 
     //
-    // Perform initial processing of the image's physical values
+    // Calculate slice statistics
     //
-    return PhysicalValuesToImageData(std::move(*physicalValues), metadata->bUnit, *sliceSpan);
+    const auto slicePhysicalStats = CalculateSlicePhysicalStats(*physicalValues, *sliceSpan);
+    const auto sliceCubePhysicalStats = CalculateSliceCubePhysicalStats(*physicalValues, *sliceSpan);
+
+    return std::make_unique<ImageData>(
+        *sliceSpan,
+        std::move(*physicalValues),
+        slicePhysicalStats,
+        sliceCubePhysicalStats,
+        metadata->bUnit,
+        *wcsParams
+    );
 }
 
 ImageData::ImageData(ImageSliceSpan sliceSpan,
                      std::vector<double> physicalValues,
-                     std::optional<std::string> physicalUnit,
                      std::vector<PhysicalStats> slicePhysicalStats,
-                     std::vector<PhysicalStats> sliceCubePhysicalStats)
+                     std::vector<PhysicalStats> sliceCubePhysicalStats,
+                     std::optional<std::string> physicalUnit,
+                     std::optional<WCSParams> wcsParams)
     : m_sliceSpan(std::move(sliceSpan))
     , m_physicalValues(std::move(physicalValues))
-    , m_physicalUnit(std::move(physicalUnit))
     , m_slicePhysicalStats(std::move(slicePhysicalStats))
     , m_sliceCubePhysicalStats(std::move(sliceCubePhysicalStats))
+    , m_physicalUnit(std::move(physicalUnit))
+    , m_wcsParams(std::move(wcsParams))
 {
 
 }
@@ -202,7 +224,7 @@ std::optional<uintmax_t> ImageData::GetSliceIndex(const ImageSliceKey& sliceKey)
 std::optional<uintmax_t> ImageData::GetSliceCubeIndex(const ImageSliceKey& sliceKey) const
 {
     // If <= 3 axes, there's only ever one slice cube
-    if (m_sliceSpan.size() <= 3)
+    if (m_sliceSpan.axes.size() <= 3)
     {
         return 0;
     }
@@ -213,21 +235,21 @@ std::optional<uintmax_t> ImageData::GetSliceCubeIndex(const ImageSliceKey& slice
         return std::nullopt;
     }
 
-    const auto slicesPerCube = m_sliceSpan.at(2);
+    const auto slicesPerCube = m_sliceSpan.axes.at(2);
 
-    return *sliceIndex / slicesPerCube;
+    return *sliceIndex / static_cast<uint64_t>(slicesPerCube);
 }
 
 std::optional<ImageSlice> ImageData::GetImageSlice(const ImageSliceKey& sliceKey) const
 {
-    if (m_sliceSpan.size() < 2)
+    if (m_sliceSpan.axes.size() < 2)
     {
         return std::nullopt;
     }
 
-    const auto sliceWidth = m_sliceSpan.at(0);
-    const auto sliceHeight = m_sliceSpan.at(1);
-    const auto sliceDataSize = sliceWidth * sliceHeight;
+    const auto sliceWidth = m_sliceSpan.axes.at(0);
+    const auto sliceHeight = m_sliceSpan.axes.at(1);
+    const auto sliceDataSize = static_cast<uintmax_t>(sliceWidth * sliceHeight);
 
     const auto sliceIndex = GetSliceIndex(sliceKey);
     const auto sliceCubeIndex = GetSliceCubeIndex(sliceKey);
@@ -243,12 +265,13 @@ std::optional<ImageSlice> ImageData::GetImageSlice(const ImageSliceKey& sliceKey
     );
 
     return ImageSlice{
-        .width = sliceWidth,
-        .height = sliceHeight,
+        .width = static_cast<uint64_t>(sliceWidth),
+        .height = static_cast<uint64_t>(sliceHeight),
         .physicalStats = m_slicePhysicalStats.at(*sliceIndex),
         .cubePhysicalStats = m_sliceCubePhysicalStats.at(*sliceCubeIndex),
         .physicalValues = slicePhysicalValues,
-        .physicalUnit = m_physicalUnit
+        .physicalUnit = m_physicalUnit,
+        .wcsParams = m_wcsParams
     };
 }
 

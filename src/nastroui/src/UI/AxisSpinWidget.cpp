@@ -14,13 +14,13 @@
 namespace Nastro
 {
 
-AxisSpinWidget::AxisSpinWidget(unsigned int axis, uint64_t axisn, QWidget* pParent)
+AxisSpinWidget::AxisSpinWidget(unsigned int axis, int64_t axisn, QWidget* pParent)
     : AxisWidget(pParent)
 {
     InitUI(axis, axisn);
 }
 
-void AxisSpinWidget::InitUI(unsigned int axis, uint64_t axisn)
+void AxisSpinWidget::InitUI(unsigned int axis, int64_t axisn)
 {
     auto pAxisLabel = new QLabel();
     pAxisLabel->setText(QString::fromStdString(std::format("Axis {} Control", axis)));

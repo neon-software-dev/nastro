@@ -8,9 +8,11 @@
 #define SRC_UI_IMAGEWIDGET_H
 
 #include "MdiWidget.h"
-#include "PixelDetailsWidget.h"
+
+#include "../Util/Common.h"
 
 #include <NFITS/Image/ImageSliceSource.h>
+#include <NFITS/WCS/WCS.h>
 
 #include <QWidget>
 
@@ -25,8 +27,10 @@ namespace Nastro
 {
     class ImageViewWidget;
     class HistogramWidget;
+    class PixelDetailsWidget;
     class ImageControlsToolbar;
     class ImageRenderToolbar;
+    class MainWindowVM;
 
     /**
      * Mdi widget which allows the user to view/render the image slices provided by an ImageSliceSource.
@@ -39,9 +43,10 @@ namespace Nastro
 
         public:
 
-            explicit ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource,
-                                 std::optional<FileHDU> associatedHDU = std::nullopt,
-                                 QWidget* pParent = nullptr);
+            ImageWidget(std::unique_ptr<NFITS::ImageSliceSource> pImageSliceSource,
+                        MainWindowVM* pMainWindowVM,
+                        std::optional<FileHDU> associatedHDU = std::nullopt,
+                        QWidget* pParent = nullptr);
             ~ImageWidget() override;
 
             [[nodiscard]] Type GetType() const override { return Type::Image; }
@@ -56,7 +61,7 @@ namespace Nastro
             void Slot_Histogram_MinVertLineChanged(double physicalValue, bool fromDrag);
             void Slot_Histogram_MaxVertLineChanged(double physicalValue, bool fromDrag);
 
-            void Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos);
+            void Slot_ImageViewWidget_ImageViewPixelHovered(const std::optional<std::pair<double, double>>& pixelCoord);
 
         private:
 
@@ -65,9 +70,12 @@ namespace Nastro
             void RebuildImageView(const NFITS::ImageRenderParams& params);
             void RebuildHistogram();
 
+            void OnNewHoveredPixelDetails(const std::optional<PixelDetails>& pixelDetails);
+
         private:
 
             std::unique_ptr<NFITS::ImageSliceSource> m_pImageSliceSource;
+            MainWindowVM* m_pMainWindowVM;
 
             NFITS::ImageSliceKey m_imageSliceKey{};
             NFITS::ImageRenderParams m_latestImageRenderParams{};

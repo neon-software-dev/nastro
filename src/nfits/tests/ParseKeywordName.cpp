@@ -21,7 +21,7 @@ TEST(ParseKeywordName, BadChars)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_FALSE(result);
+    ASSERT_FALSE(result);
 }
 
 TEST(ParseKeywordName, BadChars2)
@@ -33,7 +33,7 @@ TEST(ParseKeywordName, BadChars2)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_FALSE(result);
+    ASSERT_FALSE(result);
 }
 
 TEST(ParseKeywordName, GoodChars)
@@ -45,8 +45,8 @@ TEST(ParseKeywordName, GoodChars)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_TRUE(result);
-    EXPECT_TRUE(*result);
+    ASSERT_TRUE(result);
+    ASSERT_TRUE(*result);
     EXPECT_EQ(**result, "5G_-");
 }
 
@@ -59,7 +59,7 @@ TEST(ParseKeywordName, LeadingSpace)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_FALSE(result);
+    ASSERT_FALSE(result);
 }
 
 TEST(ParseKeywordName, TrailingSpaces)
@@ -71,8 +71,8 @@ TEST(ParseKeywordName, TrailingSpaces)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_TRUE(result);
-    EXPECT_TRUE(*result);
+    ASSERT_TRUE(result);
+    ASSERT_TRUE(*result);
     EXPECT_EQ(**result, "AAAA");
 }
 
@@ -85,7 +85,7 @@ TEST(ParseKeywordName, EmbeddedSpaces)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_FALSE(result);
+    ASSERT_FALSE(result);
 }
 
 TEST(ParseKeywordName, FullLength)
@@ -97,8 +97,8 @@ TEST(ParseKeywordName, FullLength)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_TRUE(result);
-    EXPECT_TRUE(*result);
+    ASSERT_TRUE(result);
+    ASSERT_TRUE(*result);
     EXPECT_EQ(**result, "AAAAAAAZ");
 }
 
@@ -111,6 +111,6 @@ TEST(ParseKeywordName, AllSpaces)
     const auto result = ParseKeywordName(keywordName);
 
     // Assert
-    EXPECT_TRUE(result);
+    ASSERT_TRUE(result);
     EXPECT_FALSE(*result);
 }

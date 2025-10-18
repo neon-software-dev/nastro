@@ -245,13 +245,13 @@ std::expected<ImageView, bool> ImageView::Render(const ImageSlice& imageSlice, c
     //
     // Render the image data
     //
-    const auto imageRender = RenderImageData(imageSlice, params);
+    auto imageRender = RenderImageData(imageSlice, params);
     if (!imageRender)
     {
         return std::unexpected(false);
     }
 
-    return ImageView(*imageRender);
+    return ImageView(std::move(*imageRender));
 }
 
 ImageView::ImageView(ImageRender image)

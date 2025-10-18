@@ -15,6 +15,7 @@
 #include "../Codec/Rice.h"
 #include "../Util/Endianness.h"
 #include "../Util/ImageUtilInternal.h"
+#include "../WCS/WCSInternal.h"
 
 #include <functional>
 #include <cassert>
@@ -25,7 +26,8 @@ namespace NFITS
 struct HDUBinTableImageMetadata
 {
     std::string zCmpType;
-    int64_t zBitpix;
+    int64_t zBitpix{0};
+    int64_t zNaxis{0};
     std::vector<int64_t> zNaxisns;
     std::vector<std::optional<int64_t>> zTilens;
     std::optional<double> zZero;
@@ -97,15 +99,16 @@ std::expected<HDUBinTableImageMetadata, Error> ParseBinTableImageMetadata(const 
 
     const auto zScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZSCALE);
     const auto zZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZZERO);
-    const auto zBlank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_ZBLANK);
+    const auto zBlank = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_ZBLANK);
     const auto bUnit = pHDU->header.GetFirstKeywordRecord_AsString(KEYWORD_NAME_BUNIT);
-    const auto blank = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BLANK);
+    const auto blank = pHDU->header.GetFirstKeywordRecord_AsInteger(KEYWORD_NAME_BLANK);
     const auto bScale = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BSCALE);
     const auto bZero = pHDU->header.GetFirstKeywordRecord_AsReal(KEYWORD_NAME_BZERO);
 
     return HDUBinTableImageMetadata{
         .zCmpType = zCmpTypeValue,
         .zBitpix = zBitpixValue,
+        .zNaxis = zNaxisValue,
         .zNaxisns = zNaxisns,
         .zTilens = zTilens,
         .zZero = zZero ? *zZero : std::optional<double>{},
@@ -344,6 +347,12 @@ std::expected<std::unique_ptr<BinTableImageData>, Error> LoadBinTableImageDataFr
         return std::unexpected(metadata.error());
     }
 
+    const auto wcsParams = ParseWCSParams(pHDU, metadata->zNaxis);
+    if (!wcsParams)
+    {
+        return std::unexpected(wcsParams.error());
+    }
+
     //
     // Read the image data from the bintable and uncompress it
     //
@@ -380,16 +389,25 @@ std::expected<std::unique_ptr<BinTableImageData>, Error> LoadBinTableImageDataFr
         return std::unexpected(sliceSpan.error());
     }
 
-    auto imageData = PhysicalValuesToImageData(std::move(physicalValues), metadata->bUnit, *sliceSpan);
-    if (!imageData)
-    {
-        return std::unexpected(imageData.error());
-    }
+    //
+    // Calculate slice statistics
+    //
+    const auto slicePhysicalStats = CalculateSlicePhysicalStats(physicalValues, *sliceSpan);
+    const auto sliceCubePhysicalStats = CalculateSliceCubePhysicalStats(physicalValues, *sliceSpan);
+
+    auto imageData = std::make_unique<ImageData>(
+        *sliceSpan,
+        std::move(physicalValues),
+        slicePhysicalStats,
+        sliceCubePhysicalStats,
+        metadata->bUnit,
+        *wcsParams
+    );
 
     //
     // Create a BinTableImageData
     //
-    return std::make_unique<BinTableImageData>(std::move(*(*imageData)));
+    return std::make_unique<BinTableImageData>(std::move(*imageData));
 }
 
 BinTableImageData::BinTableImageData(ImageData&& imageData)

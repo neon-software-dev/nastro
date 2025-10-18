@@ -37,11 +37,13 @@ namespace Nastro
             void OnImportDirectory(const std::filesystem::path& directoryPath);
             void OnImportFiles(const std::vector<std::filesystem::path>& filePaths);
             void OnHDUActivated(const std::optional<FileHDU>& activatedHDU);
+            void OnPixelHovered(const std::optional<PixelDetails>& pixelDetails);
 
         signals:
 
             void Signal_FilesImported(const std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>>& files);
-            void Signal_OnActivatedHDUChanged(std::optional<FileHDU> activatedHDU);
+            void Signal_OnActivatedHDUChanged(const std::optional<FileHDU>& activatedHDU);
+            void Signal_OnPixelHoveredChanged(const std::optional<PixelDetails>& pixelDetails);
 
         private slots:
 
@@ -53,6 +55,7 @@ namespace Nastro
 
             std::unordered_map<std::filesystem::path, std::vector<NFITS::HDU>> m_importedFiles;
             std::optional<FileHDU> m_activatedHDU;
+            std::optional<PixelDetails> m_hoveredPixelDetails;
     };
 }
 

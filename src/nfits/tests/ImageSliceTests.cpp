@@ -14,7 +14,7 @@ using namespace NFITS;
 TEST(GetNumSlicesInSpan, HappyPath)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
 
     // Act
     const auto result = GetNumSlicesInSpan(span);
@@ -26,8 +26,8 @@ TEST(GetNumSlicesInSpan, HappyPath)
 TEST(SliceKeyToLinearIndex, HappyPath)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
-    const auto key = ImageSliceKey{{3,5}, {4,5}, {5,5}};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
+    const auto key = ImageSliceKey{.axesValues = {5, 5, 5}};
 
     // Act
     const auto result = SliceKeyToLinearIndex(span, key);
@@ -40,21 +40,20 @@ TEST(SliceKeyToLinearIndex, HappyPath)
 TEST(SliceKeyToLinearIndex, NoKeyValues)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
     const auto key = ImageSliceKey{};
 
     // Act
     const auto result = SliceKeyToLinearIndex(span, key);
 
     // Assert
-    ASSERT_TRUE(result);
-    EXPECT_EQ(*result, 0);
+    ASSERT_FALSE(result);
 }
 
 TEST(SliceKeyToLinearIndex, TwoDimenSpan)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100};
+    const auto span = ImageSliceSpan{.axes = {100, 100}};
     const auto key = ImageSliceKey{};
 
     // Act
@@ -65,39 +64,24 @@ TEST(SliceKeyToLinearIndex, TwoDimenSpan)
     EXPECT_EQ(*result, 0);
 }
 
-TEST(SliceKeyToLinearIndex, DefaultUnspecifiedAxesToZero1)
+TEST(SliceKeyToLinearIndex, MissingKeyValues1)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
-    const auto key = ImageSliceKey{{3,5}};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
+    const auto key = ImageSliceKey{.axesValues = {5}};
 
     // Act
     const auto result = SliceKeyToLinearIndex(span, key);
 
     // Assert
-    ASSERT_TRUE(result);
-    EXPECT_EQ(*result, 5);
-}
-
-TEST(SliceKeyToLinearIndex, DefaultUnspecifiedAxesToZero2)
-{
-    // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
-    const auto key = ImageSliceKey{{4,5}};
-
-    // Act
-    const auto result = SliceKeyToLinearIndex(span, key);
-
-    // Assert
-    ASSERT_TRUE(result);
-    EXPECT_EQ(*result, 50);
+    ASSERT_FALSE(result);
 }
 
 TEST(SliceKeyToLinearIndex, MaxValue)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
-    const auto key = ImageSliceKey{{3,9}, {4,9}, {5,9}};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
+    const auto key = ImageSliceKey{.axesValues = {9, 9, 9}};
 
     // Act
     const auto result = SliceKeyToLinearIndex(span, key);
@@ -110,7 +94,7 @@ TEST(SliceKeyToLinearIndex, MaxValue)
 TEST(SliceLinearIndexToKey, HappyPath)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
     const auto index = 555U;
 
     // Act
@@ -119,14 +103,14 @@ TEST(SliceLinearIndexToKey, HappyPath)
     // Assert
     ASSERT_TRUE(result);
 
-    const auto key = ImageSliceKey{{3,5}, {4,5}, {5,5}};
+    const auto key = ImageSliceKey{.axesValues = {5, 5, 5}};
     EXPECT_EQ(*result, key);
 }
 
 TEST(SliceLinearIndexToKey, TwoDimensionalSpan)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100};
+    const auto span = ImageSliceSpan{.axes = {100, 100}};
     const auto index = 0U;
 
     // Act
@@ -142,7 +126,7 @@ TEST(SliceLinearIndexToKey, TwoDimensionalSpan)
 TEST(SliceLinearIndexToKey, ZeroIndex)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
     const auto index = 0U;
 
     // Act
@@ -151,14 +135,14 @@ TEST(SliceLinearIndexToKey, ZeroIndex)
     // Assert
     ASSERT_TRUE(result);
 
-    const auto key = ImageSliceKey{{3,0}, {4,0}, {5,0}};
+    const auto key = ImageSliceKey{.axesValues = {0, 0, 0}};
     EXPECT_EQ(*result, key);
 }
 
 TEST(SliceLinearIndexToKey, MaxValue)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
     const auto index = 999U;
 
     // Act
@@ -167,14 +151,14 @@ TEST(SliceLinearIndexToKey, MaxValue)
     // Assert
     ASSERT_TRUE(result);
 
-    const auto key = ImageSliceKey{{3,9}, {4,9}, {5,9}};
+    const auto key = ImageSliceKey{.axesValues = {9, 9, 9}};
     EXPECT_EQ(*result, key);
 }
 
 TEST(SliceLinearIndexToKey, OutOfBoundsIndex)
 {
     // Setup
-    const auto span = ImageSliceSpan{100, 100, 10, 10, 10};
+    const auto span = ImageSliceSpan{.axes = {100, 100, 10, 10, 10}};
     const auto index = 1000U;
 
     // Act

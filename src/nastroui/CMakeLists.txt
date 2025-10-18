@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26.4)
 
-project(NASTROUI VERSION 0.0.1 LANGUAGES CXX)
+project(NASTROUI VERSION 0.0.2 LANGUAGES CXX)
 
 ####
 # Build

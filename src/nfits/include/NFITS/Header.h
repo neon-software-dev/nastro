@@ -28,7 +28,9 @@ namespace NFITS
          *
          * @return The first KeywordRecord found, or std::nullopt if no such keyword record exists
          */
-        [[nodiscard]] std::optional<const KeywordRecord*> GetFirstKeywordRecord(const std::string& keywordName) const;
+        [[nodiscard]] std::optional<KeywordRecord> GetFirstKeywordRecord(const std::string& keywordName) const;
+
+        [[nodiscard]] std::vector<KeywordRecord> GetKeywordsStartingWith(const std::string& keywordNamePrefix) const;
 
         //
         // Helper methods which look through all header blocks and returns the first KeywordRecord it finds matching

@@ -30,7 +30,7 @@ namespace Nastro
             explicit ImageViewWidget(QWidget* pParent = nullptr);
             ~ImageViewWidget() override;
 
-            void SetImageView(const NFITS::ImageView& imageView);
+            void SetImageView(NFITS::ImageView imageView);
 
             /**
              * @return A QImage sized the same as this widget, filled with the
@@ -40,7 +40,10 @@ namespace Nastro
 
         signals:
 
-            void Signal_OnImageViewPixelHovered(const std::optional<std::pair<std::size_t, std::size_t>>& pixelPos);
+            /**
+             * @param pixelCoord The pixel coordinate, in FITS-standard space, of the actively mouse-hovered pixel
+             */
+            void Signal_OnImageViewPixelHovered(const std::optional<std::pair<double, double>>& pixelCoord);
 
         protected:
 

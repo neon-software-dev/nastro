@@ -6,6 +6,8 @@
  
 #include "PixelDetailsWidget.h"
 
+#include <NFITS/WCS/WCS.h>
+
 #include <QLabel>
 #include <QHBoxLayout>
 
@@ -15,37 +17,45 @@ namespace Nastro
 PixelDetailsWidget::PixelDetailsWidget(QWidget* pParent)
     : QWidget(pParent)
 {
+    InitUI();
+    DisplayPixelDetails(std::nullopt);
+}
+
+void PixelDetailsWidget::InitUI()
+{
     m_pCoordLabel = new QLabel();
     m_pCoordLabel->setStyleSheet("border: 1px solid gray; padding: 4px;");
+    m_pCoordLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
     m_pPhysicalLabel = new QLabel();
     m_pPhysicalLabel->setStyleSheet("border: 1px solid gray; padding: 4px;");
+    m_pPhysicalLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
-    auto pLayout = new QHBoxLayout(this);
-    pLayout->addWidget(m_pCoordLabel);
-    pLayout->addWidget(m_pPhysicalLabel);
-    pLayout->addStretch();
-
-    OnPixelChanged(std::nullopt);
+    m_pMainLayout = new QHBoxLayout(this);
+    m_pMainLayout->setAlignment(Qt::AlignLeft);
+    m_pMainLayout->addWidget(m_pCoordLabel);
+    m_pMainLayout->addWidget(m_pPhysicalLabel);
 }
 
-void PixelDetailsWidget::OnPixelChanged(const std::optional<PixelDetails>& pixelDetails)
+void PixelDetailsWidget::DisplayPixelDetails(const std::optional<PixelDetails>& pixelDetails)
 {
-    if (pixelDetails)
-    {
-        m_pCoordLabel->setText(QString::fromStdString(std::format("Coord: ({}, {})",
-                                                                  pixelDetails->position.first,
-                                                                  pixelDetails->position.second)));
-
-        const auto unitsStr = pixelDetails->physicalUnit ? *pixelDetails->physicalUnit : "Units";
-        const auto physicalText = std::format("Physical ({}): {:.4f}", unitsStr, pixelDetails->physicalValue);
-        m_pPhysicalLabel->setText(QString::fromStdString(physicalText));
-    }
-    else
+    if (!pixelDetails)
     {
         m_pCoordLabel->setText("Coord: (None)");
         m_pPhysicalLabel->setText("Physical: None");
+        return;
     }
+
+    if (pixelDetails->pixelCoordinate.size() >= 2)
+    {
+        m_pCoordLabel->setText(QString::fromStdString(
+            std::format("Pixel: ({:.2f}, {:.2f})", pixelDetails->pixelCoordinate.at(0), pixelDetails->pixelCoordinate.at(1)))
+        );
+    }
+
+    const auto unitsStr = pixelDetails->physicalUnit ? *pixelDetails->physicalUnit : "Units";
+    const auto physicalText = std::format("Physical: {:.4f} ({})", pixelDetails->physicalValue, unitsStr);
+    m_pPhysicalLabel->setText(QString::fromStdString(physicalText));
 }
 
 }

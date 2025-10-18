@@ -7,6 +7,9 @@
 #ifndef SRC_UI_MAINWINDOW_H
 #define SRC_UI_MAINWINDOW_H
 
+#include "ImageWidget.h"
+#include "PixelDetailsWidget.h"
+
 #include "../Util/Common.h"
 
 #include <NFITS/HDU.h>
@@ -28,6 +31,7 @@ namespace Nastro
     class MainWindowVM;
     class FilesWidget;
     class HeadersWidget;
+    class WCSWidget;
     class Worker;
     class NastroDockWidget;
 
@@ -66,6 +70,7 @@ namespace Nastro
 
             void OnViewFiles();
             void OnViewHeaders();
+            void OnViewWCS();
 
             void LoadAndDisplayHDU(const FileHDU& fileHDU);
 
@@ -78,6 +83,7 @@ namespace Nastro
 
             QAction* m_pViewFilesAction{nullptr};
             QAction* m_pViewHeadersAction{nullptr};
+            QAction* m_pViewWCSAction{nullptr};
 
             QMdiArea* m_pMdiArea{nullptr};
 
@@ -86,6 +92,9 @@ namespace Nastro
 
             std::optional<HeadersWidget*> m_pHeadersWidget;
             std::optional<NastroDockWidget*> m_pHeadersDockWidget;
+
+            std::optional<WCSWidget*> m_pWCSWidget;
+            std::optional<NastroDockWidget*> m_pWCSDockWidget;
     };
 }
 

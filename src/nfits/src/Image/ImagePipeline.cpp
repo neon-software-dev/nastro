@@ -112,7 +112,11 @@ std::expected<std::vector<double>, Error> RawImageDataToPhysicalValues(std::span
 
 inline uintmax_t GetSliceDataSize(const ImageSliceSpan& sliceSpan)
 {
-    return sliceSpan.at(0) * sliceSpan.at(1);
+    if (sliceSpan.axes.size() < 2) { return 0; }
+
+    return
+        static_cast<uintmax_t>(sliceSpan.axes.at(0)) *
+        static_cast<uintmax_t>(sliceSpan.axes.at(1));
 }
 
 inline std::span<const double> GetSliceDataSpan(const ImageSliceSpan& sliceSpan,
@@ -126,24 +130,24 @@ inline std::span<const double> GetSliceDataSpan(const ImageSliceSpan& sliceSpan,
 
 inline uint64_t GetNumSliceCubes(const ImageSliceSpan& sliceSpan)
 {
-    if (sliceSpan.empty())      { return 0U; }
-    if (sliceSpan.size() <= 3)  { return 1U; }
+    if (sliceSpan.axes.empty())      { return 0U; }
+    if (sliceSpan.axes.size() <= 3)  { return 1U; }
 
-    return std::accumulate(sliceSpan.cbegin() + 3U, sliceSpan.cend(), uint64_t{1U}, std::multiplies<>());
+    return std::accumulate(sliceSpan.axes.cbegin() + 3U, sliceSpan.axes.cend(), uint64_t{1U}, std::multiplies<>());
 }
 
 inline uintmax_t GetSliceCubeDataSize(const ImageSliceSpan& sliceSpan)
 {
     const auto sliceDataSize = GetSliceDataSize(sliceSpan);
 
-    if (sliceSpan.size() == 2)
+    if (sliceSpan.axes.size() <= 2)
     {
         return sliceDataSize;
     }
 
-    const auto slicesPerCube = sliceSpan.at(2);
+    const auto slicesPerCube = sliceSpan.axes.at(2);
 
-    return slicesPerCube * sliceDataSize;
+    return static_cast<uintmax_t>(slicesPerCube) * sliceDataSize;
 }
 
 inline std::span<const double> GetSliceCubeDataSpan(const ImageSliceSpan& sliceSpan,
@@ -155,29 +159,9 @@ inline std::span<const double> GetSliceCubeDataSpan(const ImageSliceSpan& sliceS
     return data.subspan(sliceCubeIndex * sliceCubeDataSize, sliceCubeDataSize);
 }
 
-std::expected<std::unique_ptr<ImageData>, Error>
-PhysicalValuesToImageData(std::vector<double>&& physicalValues,
-                          const std::optional<std::string>& physicalUnit,
-                          const ImageSliceSpan& sliceSpan)
+std::vector<PhysicalStats> CalculateSlicePhysicalStats(const std::vector<double>& physicalValues,
+                                                       const ImageSliceSpan& sliceSpan)
 {
-    if (sliceSpan.size() < 2)
-    {
-        return std::unexpected(Error::Msg("PhysicalValuesToImageData: Span must be at least 2-dimensional"));
-    }
-
-    const auto width = sliceSpan.at(0);
-    const auto height = sliceSpan.at(1);
-    const auto numSlices = GetNumSlicesInSpan(sliceSpan);
-    const auto expectedValuesCount = numSlices * width * height;
-
-    if (expectedValuesCount != physicalValues.size())
-    {
-        return std::unexpected(Error::Msg("PhysicalValuesToImageData: Physical values don't match span size"));
-    }
-
-    //
-    // Calculate stats for the physical values in each slice
-    //
     std::vector<PhysicalStats> slicePhysicalStats;
 
     for (uint64_t sliceIndex = 0; sliceIndex < GetNumSlicesInSpan(sliceSpan); ++sliceIndex)
@@ -186,9 +170,12 @@ PhysicalValuesToImageData(std::vector<double>&& physicalValues,
         slicePhysicalStats.push_back(CompilePhysicalStats({sliceData}));
     }
 
-    //
-    // Calculate stats for the physical values in each slice cube
-    //
+    return slicePhysicalStats;
+}
+
+std::vector<PhysicalStats> CalculateSliceCubePhysicalStats(const std::vector<double>& physicalValues,
+                                                           const ImageSliceSpan& sliceSpan)
+{
     std::vector<PhysicalStats> sliceCubePhysicalStats;
 
     for (uint64_t sliceCubeIndex = 0; sliceCubeIndex < GetNumSliceCubes(sliceSpan); ++sliceCubeIndex)
@@ -197,13 +184,7 @@ PhysicalValuesToImageData(std::vector<double>&& physicalValues,
         sliceCubePhysicalStats.push_back(CompilePhysicalStats({sliceCubeData}));
     }
 
-    return std::make_unique<ImageData>(
-        sliceSpan,
-        std::move(physicalValues),
-        physicalUnit,
-        std::move(slicePhysicalStats),
-        std::move(sliceCubePhysicalStats)
-    );
+    return sliceCubePhysicalStats;
 }
 
 }

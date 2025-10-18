@@ -13,6 +13,8 @@
 #include "../Error.h"
 #include "../SharedLib.h"
 
+#include "../WCS/WCSParams.h"
+
 #include <span>
 #include <cstdint>
 #include <vector>
@@ -21,20 +23,30 @@
 namespace NFITS
 {
     /**
-     * Axis values which identify a specific 2D slice of a N-dimensional image.
-     *
-     * If a value is not provided for an axis, a value of 0 is assumed.
-     *
-     * Keys specify axis and should be 1-based [3..naxis]
-     * Values specify axis value and should be 0-based [0..naxisn)
+     * A key which identifies a specific slice within an ImageSliceSpan
      */
-    using ImageSliceKey = std::unordered_map<unsigned int, uint64_t>;
+    struct ImageSliceKey
+    {
+        auto operator<=>(const ImageSliceKey&) const = default;
+
+        /**
+         * Contains values for each axis in an ImageSliceSpan, ignoring the
+         * first two base (width/height) axes.
+         */
+        std::vector<int64_t> axesValues;
+    };
 
     /**
-     * Defines all dimensions for a collection of image slices. Ordered by axis. Equivalent to
-     * naxisn values for each axis in an ImageData.
+     * Defines all dimensions for a collection of image slices, including base
+     * (width/height) data dimensions. Ordered by axis. Equivalent to naxisn
+     * values.
      */
-    using ImageSliceSpan = std::vector<uint64_t>;
+    struct ImageSliceSpan
+    {
+        auto operator<=>(const ImageSliceSpan&) const = default;
+
+        std::vector<int64_t> axes;
+    };
 
     /**
      * Contains the data relevant to a specific 2D slice of a N-dimensional image.
@@ -48,13 +60,19 @@ namespace NFITS
         PhysicalStats physicalStats{};              // Physical stats compiled from the specific image slice
         PhysicalStats cubePhysicalStats{};          // Physical stats compiled from the slice cube the slice is contained within
         std::span<const double> physicalValues;     // Physical values for the image slice
-        std::optional<std::string> physicalUnit;    // String describing the physical values unit
+        std::optional<std::string> physicalUnit;    // Optional string describing the physical values unit
+        std::optional<WCSParams> wcsParams;         // Optional parameters for WCS transformation
     };
 
     /**
      * @return The total number of slices that a slice span encompasses
      */
     [[nodiscard]] NFITS_PUBLIC uint64_t GetNumSlicesInSpan(const ImageSliceSpan& span);
+
+    /**
+     * @return A key which (fully) identifies the first slice in the span
+     */
+    [[nodiscard]] NFITS_PUBLIC ImageSliceKey GetDefaultSliceKey(const ImageSliceSpan& span);
 
     /**
      * Given a slice span and key, returns the (zero-based) linear index of the slice within the span.

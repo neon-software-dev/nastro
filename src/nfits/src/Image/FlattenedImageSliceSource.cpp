@@ -21,8 +21,8 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
         return std::unexpected(Error::Msg("Must provide at least one source"));
     }
 
-    std::optional<uint64_t> width;
-    std::optional<uint64_t> height;
+    std::optional<int64_t> width;
+    std::optional<int64_t> height;
     uintmax_t globalNumSlices = 0;
 
     std::vector<std::span<const double>> globalSliceSpans;
@@ -31,14 +31,14 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
     {
         // Source must have at least 2 dimensions
         const auto localSpan = source->GetImageSliceSpan();
-        if (localSpan.size() < 2)
+        if (localSpan.axes.size() < 2)
         {
             return std::unexpected(Error::Msg("Slice sources must be at least two dimensional"));
         }
 
         // Source width/height must match all other source's width/height
-        const auto localWidth = localSpan.at(0);
-        const auto localHeight = localSpan.at(1);
+        const auto localWidth = localSpan.axes.at(0);
+        const auto localHeight = localSpan.axes.at(1);
 
         if ((width && (*width != localWidth)) || (height && (*height != localHeight)))
         {
@@ -71,7 +71,12 @@ FlattenedImageSliceSource::Create(std::vector<std::unique_ptr<ImageSliceSource>>
         }
     }
 
-    const auto globalSpan = ImageSliceSpan{*width, *height, globalNumSlices};
+    assert(globalNumSlices <= std::numeric_limits<int64_t>::max());
+
+    const auto globalSpan = ImageSliceSpan{
+        .axes = {*width, *height, static_cast<int64_t>(globalNumSlices)}
+    };
+
     const auto globalPhysicalStats = CompilePhysicalStats(globalSliceSpans);
 
     return std::make_unique<FlattenedImageSliceSource>(
@@ -98,48 +103,73 @@ ImageSliceSpan FlattenedImageSliceSource::GetImageSliceSpan() const
     return m_globalSpan;
 }
 
-std::optional<ImageSlice> FlattenedImageSliceSource::GetImageSlice(const ImageSliceKey& sliceKey) const
+std::optional<std::pair<ImageSliceKey, ImageSliceSource*>> FlattenedImageSliceSource::GetLocalSource(const ImageSliceKey& sliceKey) const
 {
+    // Convert the global slice key to a global index
     const auto globalIndex = SliceKeyToLinearIndex(m_globalSpan, sliceKey);
     if (!globalIndex)
     {
         return std::nullopt;
     }
 
-    // Find which source the global index corresponds to
-    auto workingIndex = *globalIndex;
+    // Iterate through our sources, accumulating slice counts, until we've found a source containing
+    // the global slice index
+    auto indexRemaining = *globalIndex;
 
     for (const auto& source : m_sources)
     {
         const auto localSourceSpan = source->GetImageSliceSpan();
         const auto localSourceNumSlices = GetNumSlicesInSpan(localSourceSpan);
 
-        if (workingIndex < localSourceNumSlices)
+        if (indexRemaining < localSourceNumSlices)
         {
-            // Convert local index -> local key
-            const auto localKey = SliceLinearIndexToKey(localSourceSpan, workingIndex);
+            const auto localKey = SliceLinearIndexToKey(localSourceSpan, indexRemaining);
             if (!localKey)
             {
                 return std::nullopt;
             }
 
-            // Fetch the local slice
-            auto slice = source->GetImageSlice(*localKey);
-            if (!slice)
-            {
-                return std::nullopt;
-            }
-
-            // Overwrite the local slice's cube stats with this collection's global physical stats
-            slice->cubePhysicalStats = m_globalPhysicalStats;
-
-            return slice;
+            return std::make_pair(*localKey, source.get());
         }
 
-        workingIndex -= localSourceNumSlices;
+        indexRemaining -= localSourceNumSlices;
     }
 
     return std::nullopt;
+}
+
+std::optional<ImageSliceKey> FlattenedImageSliceSource::GetLocalKey(const ImageSliceKey& sliceKey)
+{
+    // Convert global slice key to (local slice key, local source)
+    const auto localSource = GetLocalSource(sliceKey);
+    if (!localSource)
+    {
+        return std::nullopt;
+    }
+
+    return localSource->first;
+}
+
+std::optional<ImageSlice> FlattenedImageSliceSource::GetImageSlice(const ImageSliceKey& sliceKey) const
+{
+    // Convert global slice key to (local slice key, local source)
+    const auto localSource = GetLocalSource(sliceKey);
+    if (!localSource)
+    {
+        return std::nullopt;
+    }
+
+    // Fetch the local slice
+    auto slice = localSource->second->GetImageSlice(localSource->first);
+    if (!slice)
+    {
+        return std::nullopt;
+    }
+
+    // Overwrite the local slice's cube stats with this collection's global physical stats
+    slice->cubePhysicalStats = m_globalPhysicalStats;
+
+    return slice;
 }
 
 }

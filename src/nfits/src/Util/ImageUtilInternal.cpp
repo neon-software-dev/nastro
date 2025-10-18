@@ -17,7 +17,7 @@ std::expected<ImageSliceSpan, Error> NaxisnsToSliceSpan(const std::vector<int64_
     {
         if (naxisn < 0) { return std::unexpected(Error::Msg("Out of bounds naxisn value: {}", naxisn)); }
 
-        sliceSpan.push_back(static_cast<uint64_t>(naxisn));
+        sliceSpan.axes.push_back(naxisn);
     }
 
     return sliceSpan;

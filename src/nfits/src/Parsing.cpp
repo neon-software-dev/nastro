@@ -7,6 +7,7 @@
 #include "Parsing.h"
 
 #include <algorithm>
+#include <queue>
 
 namespace NFITS
 {
@@ -18,6 +19,25 @@ static constexpr auto IsSpaceChar = [](const char& c){ return c == ' '; };
 static constexpr auto IsSignChar = [](const char& c){ return (c == '+') || (c == '-'); };
 static constexpr auto IsDecimalPointChar = [](const char& c){ return c == '.'; };
 static constexpr auto IsExponentChar = [](const char& c){ return (c == 'E') || (c == 'D'); };
+
+std::expected<int, Error> ToInt(const std::string& str)
+{
+    int i = 0;
+    try
+    {
+        i = std::stoi(str);
+    }
+    catch (const std::invalid_argument&)
+    {
+        return std::unexpected(Error::Msg("No conversion to integer could be performed: {}", str));
+    }
+    catch (const std::out_of_range&)
+    {
+        return std::unexpected(Error::Msg("Value out of range: {}", str));
+    }
+
+    return i;
+}
 
 /**
  * Parses a keyword name span and returns the parsed keyword name.
@@ -614,26 +634,18 @@ std::expected<BinFieldForm, Error> ParseBinTable_TFORMN(const std::string& tform
     if (nonDigitIt != tformn.cbegin())
     {
         const auto repeatCountSubstring = std::string(tformn.cbegin(), nonDigitIt);
-        int repeatCount = 1;
-        try
+        const auto repeatCount = ToInt(repeatCountSubstring);
+        if (!repeatCount)
         {
-            repeatCount = std::stoi(repeatCountSubstring);
-        }
-        catch (const std::invalid_argument&)
-        {
-            return std::unexpected(Error::Msg("No conversion to integer could be performed: {}", repeatCountSubstring));
-        }
-        catch (const std::out_of_range&)
-        {
-            return std::unexpected(Error::Msg("Value out of range: {}", repeatCountSubstring));
+            return std::unexpected(repeatCount.error());
         }
 
-        if (repeatCount < 0)
+        if (*repeatCount < 0)
         {
-            return std::unexpected(Error::Msg("Repeat count must be non-negative: {}", repeatCount));
+            return std::unexpected(Error::Msg("Repeat count must be non-negative: {}", *repeatCount));
         }
 
-        fieldForm.repeatCount = static_cast<uintmax_t>(repeatCount);
+        fieldForm.repeatCount = static_cast<uintmax_t>(*repeatCount);
     }
 
     //
@@ -715,29 +727,419 @@ std::expected<BinFieldForm, Error> ParseBinTable_TFORMN(const std::string& tform
         }
 
         const auto arrayMaxCountString = tformn.substr(arrayMaxCountStartIndex + 1, arrayMaxCountCloseIndex - arrayMaxCountStartIndex - 1);
-        int arrayMaxCount = 0;
-        try
+        const auto arrayMaxCount = ToInt(arrayMaxCountString);
+        if (!arrayMaxCount)
         {
-            arrayMaxCount = std::stoi(arrayMaxCountString);
-        }
-        catch (const std::invalid_argument&)
-        {
-            return std::unexpected(Error::Msg("No conversion to integer could be performed: {}", arrayMaxCountString));
-        }
-        catch (const std::out_of_range&)
-        {
-            return std::unexpected(Error::Msg("Value out of range: {}", arrayMaxCountString));
+            return std::unexpected(arrayMaxCount.error());
         }
 
-        if (arrayMaxCount < 0)
+        if (*arrayMaxCount < 0)
         {
-            return std::unexpected(Error::Msg("Array max count count must be non-negative: {}", arrayMaxCount));
+            return std::unexpected(Error::Msg("Array max count count must be non-negative: {}", *arrayMaxCount));
         }
 
-        fieldForm.arrayMaxCount = static_cast<uintmax_t>(arrayMaxCount);
+        fieldForm.arrayMaxCount = static_cast<uintmax_t>(*arrayMaxCount);
     }
 
     return fieldForm;
+}
+
+std::optional<WCSKeywordName> ParseWCSKeywordName_a(const std::string& keywordName, const std::string& baseName)
+{
+    WCSKeywordName wcsKeywordName{};
+
+    // If keyword doesn't start with basename, bail out
+    if (!keywordName.starts_with(baseName))
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.name = keywordName;
+    wcsKeywordName.base = baseName;
+
+    // Basename matches exactly; no 'a'
+    if (keywordName == baseName)
+    {
+        return wcsKeywordName;
+    }
+    // Otherwise, if there's one more char, it's the 'a'
+    else if (keywordName.length() == baseName.length() + 1)
+    {
+        wcsKeywordName.a = keywordName.at(baseName.length());
+
+        // Validate that the 'a' is actually A-Z
+        if (!IsUpperCaseAlphabetic(*wcsKeywordName.a))
+        {
+            return std::nullopt;
+        }
+
+        return wcsKeywordName;
+    }
+
+    // If keywordName has more than one extra char, invalid format
+    return std::nullopt;
+}
+
+std::optional<WCSKeywordName> ParseWCSKeywordName_ia(const std::string& keywordName, const std::string& baseName)
+{
+    WCSKeywordName wcsKeywordName{};
+
+    // If keyword doesn't start with basename, bail out
+    if (!keywordName.starts_with(baseName))
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.name = keywordName;
+    wcsKeywordName.base = baseName;
+
+    // Basename matches exactly - missing 'i', invalid
+    if (keywordName == baseName)
+    {
+        return std::nullopt;
+    }
+
+    std::queue<char> q;
+
+    for (std::size_t x = baseName.length(); x < keywordName.length(); ++x)
+    {
+        q.push(keywordName.at(x));
+    }
+
+    // Parse 'i' - A series of integer characters
+    std::string iStr;
+
+    while (!q.empty() && IsDigit(q.front()))
+    {
+        iStr += q.front();
+        q.pop();
+    }
+
+    // Validate 'i'
+    if (iStr.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto i = ToInt(iStr);
+    if (!i)
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.i = static_cast<int64_t>(*i);
+
+    // Parse optional 'a'
+    if (!q.empty() && IsUpperCaseAlphabetic(q.front()))
+    {
+        wcsKeywordName.a = q.front();
+        q.pop();
+    }
+
+    // If there's anything left over, unprocessed, bad keyword name
+    if (!q.empty())
+    {
+        return std::nullopt;
+    }
+
+    return wcsKeywordName;
+}
+
+std::optional<WCSKeywordName> ParseWCSKeywordName_ja(const std::string& keywordName, const std::string& baseName)
+{
+    WCSKeywordName wcsKeywordName{};
+
+    // If keyword doesn't start with basename, bail out
+    if (!keywordName.starts_with(baseName))
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.name = keywordName;
+    wcsKeywordName.base = baseName;
+
+    // Basename matches exactly - missing 'j', invalid
+    if (keywordName == baseName)
+    {
+        return std::nullopt;
+    }
+
+    std::queue<char> q;
+
+    for (std::size_t x = baseName.length(); x < keywordName.length(); ++x)
+    {
+        q.push(keywordName.at(x));
+    }
+
+    // Parse 'j' - A series of integer characters
+    std::string jStr;
+
+    while (!q.empty() && IsDigit(q.front()))
+    {
+        jStr += q.front();
+        q.pop();
+    }
+
+    // Validate 'j'
+    if (jStr.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto j = ToInt(jStr);
+    if (!j)
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.j = static_cast<int64_t>(*j);
+
+    // Parse optional 'a'
+    if (!q.empty() && IsUpperCaseAlphabetic(q.front()))
+    {
+        wcsKeywordName.a = q.front();
+        q.pop();
+    }
+
+    // If there's anything left over, unprocessed, bad keyword name
+    if (!q.empty())
+    {
+        return std::nullopt;
+    }
+
+    return wcsKeywordName;
+}
+
+std::optional<WCSKeywordName> ParseWCSKeywordName_i(const std::string& keywordName, const std::string& baseName)
+{
+    WCSKeywordName wcsKeywordName{};
+
+    // If keyword doesn't start with basename, bail out
+    if (!keywordName.starts_with(baseName))
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.name = keywordName;
+    wcsKeywordName.base = baseName;
+
+    // Basename matches exactly - missing 'i', invalid
+    if (keywordName == baseName)
+    {
+        return std::nullopt;
+    }
+
+    std::queue<char> q;
+
+    for (std::size_t x = baseName.length(); x < keywordName.length(); ++x)
+    {
+        q.push(keywordName.at(x));
+    }
+
+    // Parse 'i' - A series of integer characters
+    std::string iStr;
+
+    while (!q.empty() && IsDigit(q.front()))
+    {
+        iStr += q.front();
+        q.pop();
+    }
+
+    // Validate 'i'
+    if (iStr.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto i = ToInt(iStr);
+    if (!i)
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.i = static_cast<int64_t>(*i);
+
+    // If there's anything left over, unprocessed, bad keyword name
+    if (!q.empty())
+    {
+        return std::nullopt;
+    }
+
+    return wcsKeywordName;
+}
+
+std::optional<WCSKeywordName> ParseWCSKeywordName_i_ja(const std::string& keywordName, const std::string& baseName)
+{
+    WCSKeywordName wcsKeywordName{};
+
+    // If keyword doesn't start with basename, bail out
+    if (!keywordName.starts_with(baseName))
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.name = keywordName;
+    wcsKeywordName.base = baseName;
+
+    // Basename matches exactly - missing 'i', invalid
+    if (keywordName == baseName)
+    {
+        return std::nullopt;
+    }
+
+    std::queue<char> q;
+
+    for (std::size_t x = baseName.length(); x < keywordName.length(); ++x)
+    {
+        q.push(keywordName.at(x));
+    }
+
+    // Parse 'i' - A series of integer characters
+    std::string iStr;
+
+    while (!q.empty() && IsDigit(q.front()))
+    {
+        iStr += q.front();
+        q.pop();
+    }
+
+    // Validate 'i'
+    if (iStr.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto i = ToInt(iStr);
+    if (!i)
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.i = static_cast<int64_t>(*i);
+
+    // Next character must be underscore separating i and j
+    if (q.empty() || q.front() != '_')
+    {
+        return std::nullopt;
+    }
+
+    q.pop();
+
+    // Parse 'j' - A series of integer characters
+    std::string jStr;
+
+    while (!q.empty() && IsDigit(q.front()))
+    {
+        jStr += q.front();
+        q.pop();
+    }
+
+    // Validate 'j'
+    if (jStr.empty())
+    {
+        return std::nullopt;
+    }
+
+    const auto j = ToInt(jStr);
+    if (!j)
+    {
+        return std::nullopt;
+    }
+
+    wcsKeywordName.j = static_cast<int64_t>(*j);
+
+    // Parse optional 'a'
+    if (!q.empty() && IsUpperCaseAlphabetic(q.front()))
+    {
+        wcsKeywordName.a = q.front();
+        q.pop();
+    }
+
+    // If there's anything left over, unprocessed, bad keyword name
+    if (!q.empty())
+    {
+        return std::nullopt;
+    }
+
+    return wcsKeywordName;
+}
+
+std::expected<WCSCType, Error> ParseWCSCType(const std::string& ctype)
+{
+    /**
+     * [8.2]
+     * [..] the first four characters specify the coordinate
+     * type, the fifth character is a hyphen (‘-’), and the remain-
+     * ing three characters specify an algorithm code for computing
+     * the world coordinate value. Coordinate types with names of
+     * fewer than four characters are padded on the right with hy-
+     * phens, and algorithm codes with fewer than three charac-
+     * ters are padded on the right with blanks
+     */
+
+    //
+    // If not 8 chars with a hyphen at fifth character, consider the whole string a linear coordinate type
+    //
+    if (ctype.length() != 8) { return WCSLinearCType{.coordinateType = ctype}; }
+    if (ctype.at(4) != '-') { return WCSLinearCType{.coordinateType = ctype}; }
+
+    //
+    // Otherwise, build a non-linear ctype
+    //
+    WCSNonLinearCType nonLinearType{};
+
+    std::queue<char> q;
+    for (const auto& c : ctype)
+    {
+        q.push(c);
+    }
+
+    // Read four characters, padded on right by hyphens
+    bool inTypePadding = false;
+
+    for (std::size_t x = 0; x < 4; ++x)
+    {
+        if (IsUpperCaseAlphabetic(q.front()) && !inTypePadding)
+        {
+            nonLinearType.coordinateType.push_back(q.front());
+            q.pop();
+        }
+        else if (q.front() == '-')
+        {
+            inTypePadding = true;
+            q.pop();
+        }
+        else
+        {
+            return std::unexpected(Error::Msg("Invalid non-linear coordinate type chars"));
+        }
+    }
+
+    // Pop the dividing hyphen
+    q.pop();
+
+    // Read three characters, padded on right by spaces
+    bool inCodePadding = false;
+
+    for (std::size_t x = 0; x < 3; ++x)
+    {
+        if (IsUpperCaseAlphabetic(q.front()) && !inCodePadding)
+        {
+            nonLinearType.algorithmCode.push_back(q.front());
+            q.pop();
+        }
+        else if (q.front() == ' ')
+        {
+            inCodePadding = true;
+            q.pop();
+        }
+        else
+        {
+            return std::unexpected(Error::Msg("Invalid non-linear algorithm code chars"));
+        }
+    }
+
+    return nonLinearType;
 }
 
 }

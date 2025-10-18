@@ -44,22 +44,11 @@ namespace NFITS
         const std::optional<int64_t>& blank
     );
 
-    /**
-     * Transforms physical values into an ImageData.
-     *
-     * Note that it requires moving the physical values in, so the ImageData can be directly
-     * constructed from the data rather than copying it.
-     *
-     * @param physicalValues The physical values to be transformed
-     * @param physicalUnit Optional string describing the physical values' units
-     * @param sliceSpan Defines the organization of image slices within the physical values
-     *
-     * @return An ImageData, or Error upon error
-     */
-    [[nodiscard]] std::expected<std::unique_ptr<ImageData>, Error>
-        PhysicalValuesToImageData(std::vector<double>&& physicalValues,
-                                  const std::optional<std::string>& physicalUnit,
-                                  const ImageSliceSpan& sliceSpan);
+    [[nodiscard]] std::vector<PhysicalStats> CalculateSlicePhysicalStats(const std::vector<double>& physicalValues,
+                                                                         const ImageSliceSpan& sliceSpan);
+
+    [[nodiscard]] std::vector<PhysicalStats> CalculateSliceCubePhysicalStats(const std::vector<double>& physicalValues,
+                                                                             const ImageSliceSpan& sliceSpan);
 }
 
 #endif //NFITS_SRC_IMAGE_IMAGEPIPELINE_H

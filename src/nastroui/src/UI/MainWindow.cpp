@@ -10,6 +10,7 @@
 #include "ImageWidget.h"
 #include "NastroDockWidget.h"
 #include "SettingsDialog.h"
+#include "WCSWidget.h"
 
 #include "../VM/MainWindowVM.h"
 
@@ -80,6 +81,9 @@ void MainWindow::InitMenuBar()
         m_pViewFilesAction = pViewMenu->addAction(tr("&Files"));
         connect(m_pViewFilesAction, &QAction::triggered, [this](bool){ OnViewFiles(); });
 
+        m_pViewWCSAction = pViewMenu->addAction(tr("&WCS"));
+        connect(m_pViewWCSAction, &QAction::triggered, [this](bool){ OnViewWCS(); });
+
         m_pViewHeadersAction = pViewMenu->addAction(tr("&Headers"));
         connect(m_pViewHeadersAction, &QAction::triggered, [this](bool){ OnViewHeaders(); });
     }
@@ -100,6 +104,7 @@ void MainWindow::InitWidgets()
     // Open default/initial mdi widgets
     //
     OnViewFiles();
+    OnViewWCS();
     OnViewHeaders();
 }
 
@@ -271,6 +276,7 @@ void MainWindow::Slot_OpenHDU_LoadHDUData_Complete(Nastro::Worker* pWorker)
             {
                 const auto pImageWidget = new ImageWidget(
                     std::move(pImageData),
+                    m_pVM.get(),
                     FileHDU{.filePath = filePath, .hduIndex = hduIndex},
                     this
                 );
@@ -355,7 +361,7 @@ void MainWindow::Slot_CompareHDUs_LoadHDUData_Complete(Nastro::Worker* pWorker)
     const auto sourceDescriptionsStr = std::string(sourceDescriptionsCombined.begin(), sourceDescriptionsCombined.end());
     const auto windowTitle = std::format("Comparing: {}", sourceDescriptionsStr);
 
-    const auto pImageWidget = new ImageWidget(std::move(*flattenedSliceSource), std::nullopt, this);
+    const auto pImageWidget = new ImageWidget(std::move(*flattenedSliceSource), m_pVM.get(), std::nullopt, this);
 
     auto pSubWindow = m_pMdiArea->addSubWindow(pImageWidget);
     pSubWindow->setAttribute(Qt::WA_DeleteOnClose);
@@ -427,6 +433,32 @@ void MainWindow::OnViewHeaders()
     addDockWidget(Qt::RightDockWidgetArea, dockWidget);
 
     m_pHeadersDockWidget = dockWidget;
+}
+
+void MainWindow::OnViewWCS()
+{
+    // Mark the view action disabled since the view is being opened now
+    m_pViewWCSAction->setEnabled(false);
+
+    // If the widget already exists (was previously closed), just restore/reshow it
+    if (m_pWCSDockWidget)
+    {
+        (*m_pWCSDockWidget)->show();
+        return;
+    }
+
+    // Otherwise, create the widget and its dock widget
+    m_pWCSWidget = new WCSWidget(m_pVM.get());
+
+    auto dockWidget = new NastroDockWidget(tr("WCS"), this);
+    dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+    dockWidget->setWidget(*m_pWCSWidget);
+    dockWidget->setMinimumWidth(200);
+    connect(dockWidget, &NastroDockWidget::Signal_Closed, [this](){ m_pViewWCSAction->setEnabled(true); });
+
+    addDockWidget(Qt::RightDockWidgetArea, dockWidget);
+
+    m_pWCSDockWidget = dockWidget;
 }
 
 void MainWindow::LoadAndDisplayHDU(const FileHDU& fileHDU)
