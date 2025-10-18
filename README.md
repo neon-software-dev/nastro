@@ -15,8 +15,9 @@ nastro is a cross-platform FITS 4.0 file viewer.
   - Histogram-based value ranging
 - Read images from:
   - Primary image HDUs / Image extension HDUs
-  - RICE compressed tiled binary table images
-- Compare multiple images from different HDUs or files side-by-side in a slideshow
+  - RICE-compressed tiled binary table images
+- Combine multiple independent image HDUs into a slideshow
+- WCS view displays calculated WCS coordinates per-pixel
 
 *The project is currently under heavy development and far from complete.*
 
